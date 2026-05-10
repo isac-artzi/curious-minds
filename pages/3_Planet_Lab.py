@@ -377,6 +377,12 @@ esi = data_loader.earth_similarity_index(inputs["radius_earth"], density_g_per_c
 
 c1, c2 = st.columns([1, 1])
 with c1:
+    st.subheader(
+        "🌌 Orbit & vital signs",
+        help="Top-down view of the star (centre), the green habitable-zone ring, "
+             "and your planet's orbit. The numbers below summarize temperature, "
+             "year length, day length, and Earth Similarity Index.",
+    )
     st.plotly_chart(
         system_diagram(star_class_data["color_hex"], hz_inner, hz_outer, inputs["distance_AU"]),
         use_container_width=True,
@@ -402,6 +408,12 @@ with c1:
     )
 
 with c2:
+    st.subheader(
+        "🌫 Atmosphere & sky",
+        help="Donut chart of atmospheric composition by volume, plus a colour swatch "
+             "showing what the sky would look like at noon — combination of stellar "
+             "colour and Rayleigh scattering through this atmosphere.",
+    )
     st.plotly_chart(atmosphere_donut(atm["composition"]), use_container_width=True)
     if inputs["atmosphere_tweak"].get("action") not in (None, "none"):
         t = inputs["atmosphere_tweak"]
@@ -615,7 +627,10 @@ if result.confidence == "speculative":
 verdict_emoji = {"habitable": "🟢", "extremophile_only": "🟡", "non_habitable": "🔴"}
 st.subheader(
     f"{verdict_emoji.get(result.verdict, '⚪')} Habitability: "
-    f"{result.verdict.replace('_', ' ').title()}"
+    f"{result.verdict.replace('_', ' ').title()}",
+    help="Claude's overall verdict in three tiers: 🟢 habitable (Earth life could "
+         "survive on the surface), 🟡 extremophile-only (only hardy microbes), "
+         "🔴 non-habitable (none of Earth's biochemistry would work).",
 )
 st.write(result.verdict_reason)
 
@@ -675,16 +690,31 @@ m6.metric(
     ),
 )
 
-st.subheader("Sky at noon")
+st.subheader(
+    "Sky at noon",
+    help="What an observer on the surface would see overhead during the day. "
+         "Combines the star's spectral colour with Rayleigh scattering through "
+         "this atmosphere — Earth's blue, Mars' butterscotch, Titan's orange.",
+)
 st.write(result.sky_description)
 
-st.subheader("Plausible life")
+st.subheader(
+    "Plausible life",
+    help="Claude's best guess at what kind of biology — if any — could plausibly "
+         "exist here, with a confidence badge. Always speculative when extrapolating "
+         "beyond known Earth chemistry.",
+)
 st.markdown(
     ui.confidence_badge(result.plausible_life_confidence) + " &nbsp; " + result.plausible_life,
     unsafe_allow_html=True,
 )
 
-st.subheader("Radiation environment")
+st.subheader(
+    "Radiation environment",
+    help="Surface UV / X-ray / cosmic-ray exposure given the host star's flare "
+         "activity, the planet's magnetic field, and atmospheric shielding. "
+         "Drives whether complex molecules can survive on the surface.",
+)
 st.caption(result.surface.radiation_environment)
 
 # Terraforming output
