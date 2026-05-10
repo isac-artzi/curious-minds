@@ -1,0 +1,16 @@
+{
+  "schema": "curious-minds.experiment",
+  "version": "1.0",
+  "app": "ecosystem",
+  "created_at": "2026-05-08T00:00:00Z",
+  "title": "African savanna under multi-year drought",
+  "inputs": {
+    "biome_id": "savanna",
+    "species_ids": ["lion", "wildebeest", "zebra", "african_elephant", "acacia", "grass_blue_stem"],
+    "populations": {"lion": 80, "wildebeest": 1200, "zebra": 800, "african_elephant": 100, "acacia": 400, "grass_blue_stem": 1000},
+    "disturbance_id": "drought",
+    "disturbance_year": 3,
+    "horizon_years": 5
+  },
+  "notes": "Watch the herbivore crash propagate up to predators."
+}

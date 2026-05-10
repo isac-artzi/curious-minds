@@ -1,0 +1,17 @@
+{
+  "schema": "curious-minds.experiment",
+  "version": "1.0",
+  "app": "planet",
+  "created_at": "2026-05-08T00:00:00Z",
+  "title": "Earth-mass planet around an M-dwarf (Proxima b-like)",
+  "inputs": {
+    "spectral_class": "M",
+    "distance_AU": 0.05,
+    "mass_earth": 1.07,
+    "radius_earth": 1.03,
+    "atmosphere_id": "earth_like",
+    "water_pct": 50,
+    "moons": 0
+  },
+  "notes": "Closest known exoplanet. Tidal-locked? Flare-baked? Habitable?"
+}

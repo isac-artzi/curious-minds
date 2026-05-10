@@ -1,0 +1,16 @@
+{
+  "schema": "curious-minds.experiment",
+  "version": "1.0",
+  "app": "chemistry",
+  "created_at": "2026-05-08T00:00:00Z",
+  "title": "Thermite (Al + Fe₂O₃)",
+  "inputs": {
+    "selected": ["element:Al", "compound:Fe2O3"],
+    "quantities": {"element:Al": 2.0, "compound:Fe2O3": 1.0},
+    "temperature_K": 298,
+    "pressure_atm": 1,
+    "catalyst": "magnesium ribbon ignition",
+    "mode": "realistic"
+  },
+  "notes": "Classic redox reaction; used to weld railroad tracks. Hot enough to melt iron."
+}

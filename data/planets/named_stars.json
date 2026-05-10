@@ -1,0 +1,22 @@
+[
+  {"name":"Sun","spectral_class":"G","luminosity_solar":1.0,"mass_solar":1.0,"age_Gyr":4.6,"flare_active":false,"notes":"Our familiar G2V star — calibration anchor for habitability."},
+  {"name":"Alpha Centauri A","spectral_class":"G","luminosity_solar":1.52,"mass_solar":1.1,"age_Gyr":5.3,"flare_active":false,"notes":"Closest G-type star to Earth; binary with Alpha Cen B."},
+  {"name":"Tau Ceti","spectral_class":"G","luminosity_solar":0.52,"mass_solar":0.78,"age_Gyr":10.0,"flare_active":false,"notes":"Old, quiet G-type star with multiple known planets."},
+  {"name":"51 Pegasi","spectral_class":"G","luminosity_solar":1.36,"mass_solar":1.11,"age_Gyr":6.1,"flare_active":false,"notes":"First sun-like star found to host an exoplanet (1995)."},
+  {"name":"Alpha Centauri B","spectral_class":"K","luminosity_solar":0.5,"mass_solar":0.9,"age_Gyr":5.3,"flare_active":false,"notes":"K-dwarf companion to Alpha Cen A; quiet, mature."},
+  {"name":"Epsilon Eridani","spectral_class":"K","luminosity_solar":0.34,"mass_solar":0.82,"age_Gyr":0.4,"flare_active":true,"notes":"Young K-dwarf with mild flare activity and a debris disk."},
+  {"name":"Sigma Draconis","spectral_class":"K","luminosity_solar":0.41,"mass_solar":0.85,"age_Gyr":3.0,"flare_active":false,"notes":"Quiet K-dwarf about 19 light-years away."},
+  {"name":"Proxima Centauri","spectral_class":"M","luminosity_solar":0.0017,"mass_solar":0.122,"age_Gyr":4.85,"flare_active":true,"notes":"Closest star to the Sun; flare-active red dwarf hosting Proxima b."},
+  {"name":"Barnard's Star","spectral_class":"M","luminosity_solar":0.00339,"mass_solar":0.16,"age_Gyr":10.0,"flare_active":false,"notes":"Very old, mostly quiet M-dwarf; second-closest stellar system."},
+  {"name":"TRAPPIST-1","spectral_class":"M","luminosity_solar":0.000553,"mass_solar":0.0898,"age_Gyr":7.6,"flare_active":true,"notes":"Ultracool M-dwarf with seven known terrestrial planets, three in HZ."},
+  {"name":"Teegarden's Star","spectral_class":"M","luminosity_solar":0.00073,"mass_solar":0.097,"age_Gyr":8.0,"flare_active":false,"notes":"Old, quiet ultracool M-dwarf."},
+  {"name":"Gliese 581","spectral_class":"M","luminosity_solar":0.0135,"mass_solar":0.31,"age_Gyr":8.0,"flare_active":false,"notes":"Quiet M3V; multi-planet system, a couple of HZ candidates."},
+  {"name":"LHS 1140","spectral_class":"M","luminosity_solar":0.00441,"mass_solar":0.18,"age_Gyr":5.0,"flare_active":false,"notes":"Quiet, old M-dwarf hosting LHS 1140 b — a promising rocky HZ planet."},
+  {"name":"Procyon A","spectral_class":"F","luminosity_solar":6.9,"mass_solar":1.5,"age_Gyr":1.87,"flare_active":false,"notes":"F-type subgiant; brightest F star in our sky."},
+  {"name":"Beta Comae Berenices","spectral_class":"F","luminosity_solar":3.7,"mass_solar":1.15,"age_Gyr":2.0,"flare_active":false,"notes":"Sun-like F-dwarf, often used as a Solar analogue."},
+  {"name":"Sirius A","spectral_class":"A","luminosity_solar":25.4,"mass_solar":2.06,"age_Gyr":0.24,"flare_active":false,"notes":"Brightest star in Earth's night sky; hot A-type main-sequence star."},
+  {"name":"Vega","spectral_class":"A","luminosity_solar":40.0,"mass_solar":2.1,"age_Gyr":0.45,"flare_active":false,"notes":"Has a debris disk; possible planets."},
+  {"name":"Altair","spectral_class":"A","luminosity_solar":10.6,"mass_solar":1.79,"age_Gyr":1.2,"flare_active":false,"notes":"Rapidly rotating A-type star, oblate from spin."},
+  {"name":"Rigel","spectral_class":"B","luminosity_solar":120000,"mass_solar":21,"age_Gyr":0.008,"flare_active":false,"notes":"Blue supergiant; intense UV; planets implausible."},
+  {"name":"Zeta Puppis","spectral_class":"O","luminosity_solar":850000,"mass_solar":22.5,"age_Gyr":0.003,"flare_active":false,"notes":"Massive O-type supergiant; UV-dominated; planets unlikely."}
+]

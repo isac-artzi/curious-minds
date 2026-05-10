@@ -1,0 +1,9 @@
+[
+  {"id":"earth_like","name":"Earth-like","composition":{"N2":78,"O2":21,"Ar":0.93,"CO2":0.04,"H2O":1},"surface_pressure_atm":1.0,"notes":"Oxidizing atmosphere; biosignature for photosynthetic life."},
+  {"id":"venus_like","name":"Venus-like","composition":{"CO2":96,"N2":3.5,"H2O":0.002},"surface_pressure_atm":92,"notes":"Runaway greenhouse; surface ~462°C."},
+  {"id":"mars_like","name":"Mars-like","composition":{"CO2":95,"N2":2.7,"Ar":1.6,"O2":0.13},"surface_pressure_atm":0.006,"notes":"Thin; insufficient pressure for liquid water at most surface temperatures."},
+  {"id":"titan_like","name":"Titan-like","composition":{"N2":95,"CH4":4.9,"H2":0.1},"surface_pressure_atm":1.45,"notes":"Cold (94 K); methane/ethane lakes; pre-biotic chemistry interesting."},
+  {"id":"hydrogen_helium","name":"Hydrogen–helium gas giant","composition":{"H2":89,"He":10,"CH4":0.3,"NH3":0.026},"surface_pressure_atm":1000000,"notes":"No solid surface; metallic hydrogen at depth."},
+  {"id":"reducing_archean","name":"Reducing Archean (early Earth)","composition":{"N2":80,"CO2":15,"CH4":2,"H2O":3},"surface_pressure_atm":1.0,"notes":"Pre-photosynthesis; orange skies likely from methane haze."},
+  {"id":"ice_world","name":"Ice world (low-pressure)","composition":{"N2":90,"CO2":9,"H2O":1},"surface_pressure_atm":0.1,"notes":"Cold sterile surface; subsurface ocean possible."}
+]

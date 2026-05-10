@@ -1,0 +1,14 @@
+[
+  {"type":"predation","predator":"wolf_gray","prey":"elk","strength":"strong","notes":"Yellowstone reintroduction (1995) reduced elk by ~half, allowed willow/aspen recovery."},
+  {"type":"predation","predator":"wolf_gray","prey":"deer_white_tailed","strength":"medium","notes":"Wolf reduction in eastern US led to deer hyperabundance."},
+  {"type":"predation","predator":"sea_otter","prey":"sea_urchin_purple","strength":"strong","notes":"Otter loss → urchin barrens → kelp forest collapse."},
+  {"type":"predation","predator":"lynx_canada","prey":"snowshoe_hare","strength":"strong","notes":"Classic 10-year predator-prey oscillation."},
+  {"type":"predation","predator":"lion","prey":"wildebeest","strength":"strong","notes":"Cooperative hunting; wildebeest migration drives lion behavior."},
+  {"type":"predation","predator":"polar_bear","prey":"caribou","strength":"medium","notes":"Polar bears occasionally hunt caribou ashore when sea-ice hunting fails."},
+  {"type":"engineering","actor":"beaver","effect":"creates wetlands","strength":"strong","notes":"A single beaver pond can support 30+ species not present in dry forest."},
+  {"type":"engineering","actor":"african_elephant","effect":"opens woodland to grassland","strength":"strong","notes":"Elephant browsing maintains savanna structure."},
+  {"type":"engineering","actor":"prairie_dog","effect":"creates burrow networks","strength":"strong","notes":"~150 species depend on prairie dog colonies."},
+  {"type":"foundation","actor":"kelp_giant","effect":"creates 3D habitat","strength":"strong","notes":"Kelp forests support hundreds of species; collapse cascades widely."},
+  {"type":"foundation","actor":"coral_staghorn","effect":"builds reef structure","strength":"strong","notes":"Reef collapse from bleaching destroys habitat for thousands of species."},
+  {"type":"competition","species_a":"red_fox","species_b":"arctic_fox","strength":"medium","notes":"Red foxes expanding north with warming displace arctic foxes."}
+]

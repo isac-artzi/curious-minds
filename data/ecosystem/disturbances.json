@@ -1,0 +1,10 @@
+[
+  {"id":"drought","name":"Drought","description":"Multi-year reduction in precipitation.","case_study":"2011–2017 California drought killed >100M trees in Sierra Nevada."},
+  {"id":"wildfire","name":"Wildfire","description":"Large stand-replacing fire.","case_study":"2020 Australian bushfires burned 18.6M hectares, killed est. 3 billion animals."},
+  {"id":"hard_winter","name":"Hard winter","description":"Unusually deep snow and cold; herbivores starve, predators briefly thrive.","case_study":"1996–97 Yellowstone winter killed thousands of elk, fed wolves through spring."},
+  {"id":"invasive_arrival","name":"Invasive species arrival","description":"A non-native species establishes and disrupts food web.","case_study":"Burmese python in the Everglades has reduced mammal sightings by >90%."},
+  {"id":"apex_removal","name":"Apex predator removal","description":"Top-down control disappears; mesopredator and herbivore release follows.","case_study":"Wolf extirpation across most of US led to deer hyperabundance and forest browse damage."},
+  {"id":"climate_warming_2C","name":"Climate warming +2 °C","description":"Range shifts, phenology mismatches, ice loss.","case_study":"Polar bear sea-ice habitat shrinking ~13% per decade."},
+  {"id":"plastic_pollution","name":"Plastic pollution","description":"Macro and microplastic accumulation in habitat and food web.","case_study":"Great Pacific Garbage Patch; ingested microplastics now found in nearly all marine organisms."},
+  {"id":"habitat_loss_50","name":"Habitat loss 50%","description":"Half of suitable habitat is converted (logging, agriculture, urbanization).","case_study":"Amazon deforestation has cleared ~17% of original forest; tipping-point concerns at 25%."}
+]

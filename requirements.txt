@@ -1,0 +1,9 @@
+streamlit>=1.40
+anthropic>=0.39
+pydantic>=2.6
+plotly>=5.20
+networkx>=3.2
+numpy>=1.26
+pandas>=2.2
+pillow>=10.2
+python-dotenv>=1.0

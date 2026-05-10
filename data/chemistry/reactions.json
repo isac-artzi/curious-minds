@@ -1,0 +1,12 @@
+[
+  {"id":"combustion_h2","name":"Hydrogen combustion","equation":"2H_2 + O_2 \\rightarrow 2H_2O","enthalpy_kJ_per_mol":-286,"class":"combustion","conditions":"spark or flame","real_world":"Hydrogen fuel cells, Space Shuttle main engines."},
+  {"id":"combustion_ch4","name":"Methane combustion","equation":"CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O","enthalpy_kJ_per_mol":-890,"class":"combustion","conditions":"ignition","real_world":"Natural-gas stoves, power plants."},
+  {"id":"haber","name":"Haber–Bosch ammonia synthesis","equation":"N_2 + 3H_2 \\rightarrow 2NH_3","enthalpy_kJ_per_mol":-92,"class":"synthesis","conditions":"450°C, 200 atm, Fe catalyst","real_world":"Fertilizer for ~50% of world food production."},
+  {"id":"neutralization_hcl_naoh","name":"Strong acid–base neutralization","equation":"HCl + NaOH \\rightarrow NaCl + H_2O","enthalpy_kJ_per_mol":-57,"class":"neutralization","conditions":"aqueous, room T","real_world":"Antacids, lab pH adjustment."},
+  {"id":"photosynthesis","name":"Photosynthesis (overall)","equation":"6CO_2 + 6H_2O \\rightarrow C_6H_{12}O_6 + 6O_2","enthalpy_kJ_per_mol":2802,"class":"endothermic_biological","conditions":"sunlight, chlorophyll","real_world":"Source of nearly all atmospheric oxygen and food energy."},
+  {"id":"respiration","name":"Cellular respiration (overall)","equation":"C_6H_{12}O_6 + 6O_2 \\rightarrow 6CO_2 + 6H_2O","enthalpy_kJ_per_mol":-2802,"class":"biological_oxidation","conditions":"enzymes, body T","real_world":"How animals (you) extract energy from food."},
+  {"id":"thermite","name":"Thermite reaction","equation":"2Al + Fe_2O_3 \\rightarrow Al_2O_3 + 2Fe","enthalpy_kJ_per_mol":-852,"class":"redox","conditions":"ignition (~ Mg ribbon)","real_world":"Welding railroad tracks, incendiary devices."},
+  {"id":"limestone_calcination","name":"Limestone calcination","equation":"CaCO_3 \\rightarrow CaO + CO_2","enthalpy_kJ_per_mol":178,"class":"decomposition","conditions":"~825°C","real_world":"Cement production; ~8% of global CO₂ emissions."},
+  {"id":"electrolysis_water","name":"Electrolysis of water","equation":"2H_2O \\rightarrow 2H_2 + O_2","enthalpy_kJ_per_mol":572,"class":"electrochemistry","conditions":"electric current","real_world":"Green-hydrogen production from renewable electricity."},
+  {"id":"sodium_chlorine","name":"Sodium + chlorine","equation":"2Na + Cl_2 \\rightarrow 2NaCl","enthalpy_kJ_per_mol":-822,"class":"synthesis","conditions":"contact","real_world":"How table salt forms from two violently dangerous elements."}
+]
