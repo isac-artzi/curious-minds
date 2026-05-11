@@ -1,0 +1,16 @@
+{
+  "g_earth": {"value": 9.81, "unit": "m/s^2", "name": "Standard gravity (Earth surface)"},
+  "g_moon": {"value": 1.62, "unit": "m/s^2", "name": "Surface gravity (Moon)"},
+  "g_mars": {"value": 3.71, "unit": "m/s^2", "name": "Surface gravity (Mars)"},
+  "g_jupiter": {"value": 24.79, "unit": "m/s^2", "name": "Surface gravity (Jupiter, cloud-top)"},
+  "G": {"value": 6.6743e-11, "unit": "m^3 kg^-1 s^-2", "name": "Gravitational constant"},
+  "c": {"value": 2.998e8, "unit": "m/s", "name": "Speed of light in vacuum"},
+  "h": {"value": 6.626e-34, "unit": "J*s", "name": "Planck constant"},
+  "hbar": {"value": 1.0546e-34, "unit": "J*s", "name": "Reduced Planck constant"},
+  "e_charge": {"value": 1.602e-19, "unit": "C", "name": "Elementary charge"},
+  "k_B": {"value": 1.381e-23, "unit": "J/K", "name": "Boltzmann constant"},
+  "m_e": {"value": 9.109e-31, "unit": "kg", "name": "Electron rest mass"},
+  "m_p": {"value": 1.673e-27, "unit": "kg", "name": "Proton rest mass"},
+  "m_n": {"value": 1.675e-27, "unit": "kg", "name": "Neutron rest mass"},
+  "eV_to_J": {"value": 1.602e-19, "unit": "J/eV", "name": "Electronvolt in joules"}
+}

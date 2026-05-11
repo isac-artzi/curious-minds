@@ -1,0 +1,11 @@
+[
+  {"id": "rubber_dry_concrete", "name": "Rubber on dry concrete", "mu_s": 1.00, "mu_k": 0.80},
+  {"id": "rubber_wet_concrete", "name": "Rubber on wet concrete", "mu_s": 0.70, "mu_k": 0.50},
+  {"id": "wood_wood", "name": "Wood on wood", "mu_s": 0.50, "mu_k": 0.30},
+  {"id": "steel_steel", "name": "Steel on steel", "mu_s": 0.74, "mu_k": 0.57},
+  {"id": "steel_steel_oiled", "name": "Steel on steel (oiled)", "mu_s": 0.16, "mu_k": 0.06},
+  {"id": "steel_ice", "name": "Steel on ice", "mu_s": 0.03, "mu_k": 0.015},
+  {"id": "teflon_teflon", "name": "Teflon on Teflon", "mu_s": 0.04, "mu_k": 0.04},
+  {"id": "rubber_ice", "name": "Rubber on ice", "mu_s": 0.30, "mu_k": 0.15},
+  {"id": "leather_wood", "name": "Leather on wood", "mu_s": 0.40, "mu_k": 0.30}
+]

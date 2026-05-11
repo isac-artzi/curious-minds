@@ -12,7 +12,7 @@ import streamlit as st
 SCHEMA = "curious-minds.experiment"
 SCHEMA_VERSION = "1.0"
 
-App = Literal["chemistry", "ecosystem", "planet"]
+App = Literal["chemistry", "ecosystem", "planet", "physics"]
 
 
 def serialize(app: App, title: str, inputs: dict[str, Any], notes: str = "") -> str:

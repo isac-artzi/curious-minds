@@ -1,0 +1,65 @@
+[
+  {
+    "id": "cesium",
+    "name": "Cesium",
+    "symbol": "Cs",
+    "work_function_eV": 2.14,
+    "notes": "Lowest work function of any common metal. Used in old photocells and photomultipliers."
+  },
+  {
+    "id": "potassium",
+    "name": "Potassium",
+    "symbol": "K",
+    "work_function_eV": 2.30,
+    "notes": "Visible-light photocathode."
+  },
+  {
+    "id": "sodium",
+    "name": "Sodium",
+    "symbol": "Na",
+    "work_function_eV": 2.36,
+    "notes": "Used in classic photoelectric demonstrations; visible blue-green threshold."
+  },
+  {
+    "id": "calcium",
+    "name": "Calcium",
+    "symbol": "Ca",
+    "work_function_eV": 2.87,
+    "notes": "Threshold around violet light."
+  },
+  {
+    "id": "zinc",
+    "name": "Zinc",
+    "symbol": "Zn",
+    "work_function_eV": 4.33,
+    "notes": "UV threshold — used in Hertz's original 1887 photoelectric observations."
+  },
+  {
+    "id": "copper",
+    "name": "Copper",
+    "symbol": "Cu",
+    "work_function_eV": 4.65,
+    "notes": "Common metal; UV photoelectrons only."
+  },
+  {
+    "id": "silver",
+    "name": "Silver",
+    "symbol": "Ag",
+    "work_function_eV": 4.73,
+    "notes": "UV threshold."
+  },
+  {
+    "id": "gold",
+    "name": "Gold",
+    "symbol": "Au",
+    "work_function_eV": 5.10,
+    "notes": "High work function — needs deep-UV light to eject electrons."
+  },
+  {
+    "id": "platinum",
+    "name": "Platinum",
+    "symbol": "Pt",
+    "work_function_eV": 5.65,
+    "notes": "Among the highest work functions of common metals."
+  }
+]

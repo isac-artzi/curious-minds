@@ -20,7 +20,7 @@ st.markdown(
       <div style="font-size:0.85rem; opacity:0.85; letter-spacing:0.08em;">SENSYM EDUCATION</div>
       <h1 style="margin:0.25rem 0 0.5rem 0; color:white;">Curious Minds</h1>
       <p style="margin:0; font-size:1.05rem; opacity:0.95;">
-        Three browser-accessible science sandboxes — combine real, curated facts in unexpected
+        Four browser-accessible science sandboxes — combine real, curated facts in unexpected
         ways and watch a small AI reason out the consequences.
       </p>
     </div>
@@ -28,7 +28,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown("### 🧪 Chemistry What-If Lab")
     st.markdown(
@@ -52,6 +52,14 @@ with c3:
         "exist on it, why, and what kind."
     )
     st.page_link("pages/3_Planet_Lab.py", label="Open Planet Builder →", icon="🪐")
+
+with c4:
+    st.markdown("### 🔬 Physics Lab")
+    st.markdown(
+        "Launch a projectile at 45°, send a cart down a 3-hill coaster, "
+        "test Einstein's photoelectric equation — seven scenarios, one schema."
+    )
+    st.page_link("pages/4_Physics_Lab.py", label="Open Physics Lab →", icon="🔬")
 
 st.divider()
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "electron",
+    "name": "Electron",
+    "symbol": "e⁻",
+    "mass_kg": 9.109e-31,
+    "charge_C": -1.602e-19,
+    "category": "fundamental",
+    "typical_speed_m_s": 1.0e6,
+    "notes": "Lightest charged matter particle. Wave-like at lab energies — basis of electron microscopy."
+  },
+  {
+    "id": "proton",
+    "name": "Proton",
+    "symbol": "p⁺",
+    "mass_kg": 1.673e-27,
+    "charge_C": 1.602e-19,
+    "category": "baryon",
+    "typical_speed_m_s": 2.0e7,
+    "notes": "Nucleon. Roughly 1836× heavier than electron, so wave behavior shows up only at very low speeds."
+  },
+  {
+    "id": "neutron",
+    "name": "Neutron",
+    "symbol": "n",
+    "mass_kg": 1.675e-27,
+    "charge_C": 0.0,
+    "category": "baryon",
+    "typical_speed_m_s": 2200.0,
+    "notes": "Thermal neutron speed (≈2200 m/s) gives wavelength ~0.18 nm — perfect for crystal diffraction."
+  },
+  {
+    "id": "buckyball",
+    "name": "C₆₀ buckyball",
+    "symbol": "C₆₀",
+    "mass_kg": 1.196e-24,
+    "charge_C": 0.0,
+    "category": "molecule",
+    "typical_speed_m_s": 200.0,
+    "notes": "Largest object whose quantum interference has been observed (Zeilinger group, 1999)."
+  },
+  {
+    "id": "baseball",
+    "name": "Baseball",
+    "symbol": "⚾",
+    "mass_kg": 0.145,
+    "charge_C": 0.0,
+    "category": "macroscopic",
+    "typical_speed_m_s": 40.0,
+    "notes": "Major-league fastball ≈ 40 m/s. de Broglie wavelength is ~10⁻³⁴ m — utterly undetectable."
+  },
+  {
+    "id": "bullet",
+    "name": "Rifle bullet",
+    "symbol": "🔫",
+    "mass_kg": 0.010,
+    "charge_C": 0.0,
+    "category": "macroscopic",
+    "typical_speed_m_s": 800.0,
+    "notes": "9 mm round ≈ 10 g at ~800 m/s. Still vastly classical."
+  }
+]
