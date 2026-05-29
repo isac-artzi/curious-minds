@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .schemas import CascadeStep, EcosystemResult, SpeciesOutcome
+from .schemas import CascadeStep, EcosystemResult, QuizItem, SpeciesOutcome
 
 SYSTEM_PROMPT = """You are an ecologist who reasons over a curated knowledge base of species,
 biomes, interactions, and disturbances. You explain at the level of a 7th grader and a biology
@@ -50,13 +50,38 @@ NEW SCHEMA FIELDS — populate carefully:
 - biodiversity_index_change: increases | stable | decreases | collapses.
   Qualitative direction of Shannon diversity over the horizon.
 
-LENGTH BUDGET (must fit in ~3000 tokens — keep prose tight!)
+VISUAL CUES (Living Biome Theater) — short, vivid, classroom-friendly:
+- dramatic_moment: ONE sentence (≤ 22 words) describing the most striking
+  visible thing in this scenario — what a kid would point at. Examples:
+  "Wolves slip into the valley and the elk freeze mid-graze."
+  "Sea urchins march across a kelp graveyard."
+  "A bison herd kicks up a dust trail across the prairie."
+- visual_caption: ≤ 12 words pinned to the scene as a caption.
+  Examples: "Trophic cascade in motion.", "Kelp forest collapse.",
+  "Prairie engineers at work."
+
+QUIZ (1–2 multiple-choice questions tied to THIS specific scenario):
+- quiz: 1–2 items. Each item has:
+  - question: a focused MCQ about THIS biome + these species + the
+    disturbance/climate/intervention.
+  - choices: 3 or 4 short options. Exactly ONE is correct.
+  - correct_index: 0-based index of the correct choice.
+  - explanation: ≤ 25 words explaining why (≤ 1 sentence).
+- Pick questions that highlight the headline mechanism (cascade, keystone
+  removal, invasive pressure, recovery time, biodiversity collapse, etc.).
+- Avoid generic textbook questions. Use specific species and numbers
+  from the input.
+
+LENGTH BUDGET (must fit in ~3500 tokens — keep prose tight!)
 - summary: 2 sentences max.
 - cascade: at most 6 steps; each step ≤ 30 words.
 - species_outcomes: one entry per species in the input (no extras); note ≤ 25 words.
 - real_world_analogue: 1 sentence.
 - conservation_note: 1–2 sentences.
 - follow_ups: exactly 3, each ≤ 12 words.
+- dramatic_moment: 1 sentence (≤ 22 words).
+- visual_caption: ≤ 12 words.
+- quiz: 1–2 items.
 """
 
 
@@ -128,5 +153,31 @@ FALLBACK = EcosystemResult(
         "What happens if you remove the wolves again?",
         "What if a hard winter killed half the elk in year 3?",
         "How would adding grizzly bears change the cascade?",
+    ],
+    dramatic_moment=(
+        "Wolves slip into the valley and willow regrows along the stream where "
+        "elk no longer dare linger."
+    ),
+    visual_caption="Trophic cascade in motion.",
+    quiz=[
+        QuizItem(
+            question="Why do beavers return after wolves are reintroduced?",
+            choices=[
+                "Wolves eat beavers directly.",
+                "Willow regrows once elk stop browsing it, giving beavers building material.",
+                "Wolves dig burrows that beavers expand into dams.",
+            ],
+            correct_index=1,
+            explanation=(
+                "Wolves don't help beavers directly — they suppress elk, "
+                "which lets willow come back, which beavers use to build dams."
+            ),
+        ),
+        QuizItem(
+            question="Which species would most reshape this ecosystem if removed?",
+            choices=["Cottonwood", "Beaver", "Gray wolf", "Elk"],
+            correct_index=2,
+            explanation="The wolf is the keystone — removing it lets elk overgraze again.",
+        ),
     ],
 )

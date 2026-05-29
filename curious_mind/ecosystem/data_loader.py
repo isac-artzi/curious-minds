@@ -29,6 +29,21 @@ def load_disturbances() -> list[dict]:
     return json.loads((DATA_DIR / "disturbances.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def load_scenarios() -> list[dict]:
+    path = DATA_DIR / "scenarios.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def scenario_by_id(scenario_id: str) -> dict | None:
+    for s in load_scenarios():
+        if s.get("id") == scenario_id:
+            return s
+    return None
+
+
 def species_by_id(sid: str) -> dict | None:
     for s in load_species():
         if s["id"] == sid:

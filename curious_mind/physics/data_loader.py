@@ -29,6 +29,21 @@ def load_materials() -> list[dict]:
     return json.loads((DATA_DIR / "materials.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def load_scenarios() -> list[dict]:
+    path = DATA_DIR / "scenarios.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def scenario_by_id(scenario_id: str) -> dict | None:
+    for s in load_scenarios():
+        if s.get("id") == scenario_id:
+            return s
+    return None
+
+
 def constant(name: str) -> float:
     """Return the numeric value of a named constant."""
     return float(load_constants()[name]["value"])

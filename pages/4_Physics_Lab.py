@@ -7,10 +7,13 @@ import math
 
 import streamlit as st
 
+import streamlit.components.v1 as components
+
 from curious_mind import llm, ui
 from curious_mind.persistence import render_persistence_sidebar
 from curious_mind.physics import data_loader, prompts, simulators, visuals
 from curious_mind.physics.schemas import PhysicsResult
+from curious_mind.physics.theater import render_theater, theater_height
 
 
 ui.page_setup("Physics Lab", "🔬")
@@ -78,10 +81,40 @@ else:
         st.session_state.phy_inputs.setdefault(k, v)
 
 
+def _apply_scenario_preset(scn: dict) -> None:
+    """Load a Showcase preset into session_state.phy_inputs and force a rerun."""
+    new_inp = {**_default_inputs(), **st.session_state.phy_inputs}
+    new_inp["scenario"] = scn["scenario"]
+    for k, v in (scn.get("inputs") or {}).items():
+        new_inp[k] = v
+    st.session_state.phy_inputs = new_inp
+    # Force a fresh LLM call + clear challenge state
+    st.session_state.pop("phy_last_result", None)
+    st.session_state.pop("phy_last_signature", None)
+    st.session_state.pop("phy_challenge_revealed_sig", None)
+    st.session_state.pop("phy_challenge_prediction", None)
+    st.session_state["phy_active_scenario_preset"] = scn.get("id", "")
+    st.session_state["phy_active_preset_callout"] = scn.get("callout", "")
+
+
 # ---------------------------------------------------------------------------
 # Sidebar — scenario picker + per-scenario sliders
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    # -------- Showcase preset menu ----------------------------------------
+    with st.expander("🧙 Showcase experiments", expanded=False):
+        st.caption("One-click curated scenarios. Each loads inputs and runs.")
+        _scenarios = data_loader.load_scenarios()
+        for s in _scenarios:
+            if st.button(s["label"], key=f"phy_scn_{s['id']}", use_container_width=True):
+                _apply_scenario_preset(s)
+                st.toast(f"Loaded: {s['label']}")
+                st.rerun()
+            if s.get("blurb"):
+                st.caption(s["blurb"])
+        if not _scenarios:
+            st.caption("_(No scenarios.json found.)_")
+
     st.markdown("### Scenario")
     scenario = st.selectbox(
         "Pick a scenario",
@@ -288,12 +321,27 @@ with st.sidebar:
             help="Distance from the slits to the detector. Larger L → wider fringes.",
         )
 
+    # -------- Challenge mode toggle ---------------------------------------
+    st.session_state.setdefault("phy_challenge_mode", False)
+    st.session_state.phy_challenge_mode = st.toggle(
+        "🎯 Challenge mode",
+        value=st.session_state.phy_challenge_mode,
+        help="Hides the answer until you commit a prediction. Great for "
+             "classroom 'guess first' moments.",
+    )
+
     st.divider()
+    inputs_for_save = {**inp, "challenge_mode": st.session_state.phy_challenge_mode}
     loaded = render_persistence_sidebar(
-        "physics", inp, title_default=SCENARIO_LABELS[scenario],
+        "physics", inputs_for_save, title_default=SCENARIO_LABELS[scenario],
     )
     if loaded:
+        st.session_state.phy_challenge_mode = bool(loaded.pop("challenge_mode", False))
         st.session_state.phy_inputs = {**_default_inputs(), **loaded}
+        st.session_state.pop("phy_last_result", None)
+        st.session_state.pop("phy_last_signature", None)
+        st.session_state.pop("phy_challenge_revealed_sig", None)
+        st.session_state.pop("phy_challenge_prediction", None)
         st.rerun()
 
     run_btn = st.button("⚡ Run scenario", type="primary", use_container_width=True)
@@ -773,7 +821,147 @@ def _payload_and_render() -> tuple[dict, dict, str]:
     return {}, {}, ""
 
 
-computed, payload_inputs, narrative_subheader = _payload_and_render()
+def _compute_sim_only(scenario: str, inp: dict) -> dict:
+    """Compute simulator output without any Streamlit rendering — needed for
+    the Apparatus Theater hero, which renders before the analysis section."""
+    if scenario == "projectile":
+        return simulators.projectile(inp["v0"], inp["angle_deg"], inp["g"], inp["y0"])
+    if scenario == "incline":
+        mat = data_loader.material_by_id(inp["incline_material"])
+        return simulators.inclined_plane(
+            inp["incline_mass"], inp["incline_angle"],
+            mat["mu_s"], mat["mu_k"], inp["incline_f_applied"],
+        )
+    if scenario == "rollercoaster":
+        return simulators.rollercoaster(
+            inp["rc_h0"], inp["rc_h1"], inp["rc_h2"],
+            inp["rc_mu_k"], inp["rc_mass"],
+        )
+    if scenario == "collision":
+        # Theater only needs the 1-D summary numbers for two carts.
+        n = int(inp.get("col_n", 2))
+        if n >= 2:
+            m1, m2 = float(inp["col_masses"][0]), float(inp["col_masses"][1])
+            v1, v2 = float(inp["col_vxs"][0]), float(inp["col_vxs"][1])
+        else:
+            m1, m2, v1, v2 = 1.0, 1.0, 1.0, -1.0
+        ctype = inp.get("col_type", "elastic")
+        e_used = 1.0 if ctype == "elastic" else (0.0 if ctype == "plastic" else float(inp.get("col_e", 0.5)))
+        return simulators.collision_1d(m1, m2, v1, v2, e=e_used)
+    if scenario == "spring":
+        return simulators.spring_shm(
+            inp["spring_m"], inp["spring_k"],
+            inp["spring_x0"], inp["spring_v0"],
+        )
+    if scenario == "photoelectric":
+        metal = data_loader.metal_by_id(inp["pe_metal"])
+        return simulators.photoelectric(
+            inp["pe_freq_hz"], inp["pe_intensity_rel"],
+            metal["work_function_eV"],
+        )
+    if scenario == "de_broglie":
+        particle = data_loader.particle_by_id(inp["db_particle"])
+        return simulators.de_broglie(particle["mass_kg"], inp["db_v_mps"])
+    return {}
+
+
+def _theater_inp(scenario: str, inp: dict) -> dict:
+    """Map the page's per-scenario state keys to the theater dispatcher's
+    canonical inp keys."""
+    if scenario == "incline":
+        return {
+            "angle_deg": inp["incline_angle"],
+            "mass": inp["incline_mass"],
+        }
+    if scenario == "collision":
+        n = int(inp.get("col_n", 2))
+        m1 = float(inp["col_masses"][0]) if n >= 1 else 1.0
+        m2 = float(inp["col_masses"][1]) if n >= 2 else 1.0
+        v1 = float(inp["col_vxs"][0]) if n >= 1 else 0.0
+        v2 = float(inp["col_vxs"][1]) if n >= 2 else 0.0
+        return {"m1": m1, "m2": m2, "v1": v1, "v2": v2}
+    if scenario == "spring":
+        return {"m": inp["spring_m"], "k": inp["spring_k"]}
+    if scenario == "photoelectric":
+        metal = data_loader.metal_by_id(inp["pe_metal"])
+        return {
+            "pe_freq_hz": inp["pe_freq_hz"],
+            "pe_intensity": inp["pe_intensity_rel"],
+            "pe_phi": metal["work_function_eV"],
+        }
+    if scenario == "de_broglie":
+        particle = data_loader.particle_by_id(inp["db_particle"])
+        return {
+            "db_mass_kg": particle["mass_kg"],
+            "db_v_mps": inp["db_v_mps"],
+            "db_particle": particle["name"],
+        }
+    # projectile + rollercoaster already use canonical keys
+    return inp
+
+
+def _payload_inputs(scenario: str, sim: dict, inp: dict) -> dict:
+    """Build the {"computed": sim, "inputs": {...}} dict that goes to Claude.
+
+    Mirrors what ``_payload_and_render`` returns, but pure-data only (no UI)."""
+    if scenario == "projectile":
+        return {"computed": sim, "inputs": {
+            "v0_mps": inp["v0"], "angle_deg": inp["angle_deg"],
+            "g_m_s2": inp["g"], "y0_m": inp["y0"],
+        }}
+    if scenario == "incline":
+        mat = data_loader.material_by_id(inp["incline_material"])
+        return {"computed": sim, "inputs": {
+            "mass_kg": inp["incline_mass"], "angle_deg": inp["incline_angle"],
+            "mu_s": mat["mu_s"], "mu_k": mat["mu_k"],
+            "f_applied_N": inp["incline_f_applied"],
+            "material": mat["name"],
+        }}
+    if scenario == "rollercoaster":
+        return {"computed": sim, "inputs": {
+            "h0_m": inp["rc_h0"], "h1_m": inp["rc_h1"], "h2_m": inp["rc_h2"],
+            "mu_k": inp["rc_mu_k"], "mass_kg": inp["rc_mass"],
+        }}
+    if scenario == "collision":
+        n_disks = int(inp["col_n"])
+        ctype = inp["col_type"]
+        e_used = 1.0 if ctype == "elastic" else (0.0 if ctype == "plastic" else float(inp["col_e"]))
+        return {"computed": sim, "inputs": {
+            "n_disks": n_disks,
+            "masses_kg": [float(inp["col_masses"][i]) for i in range(n_disks)],
+            "velocities_mps": [
+                [float(inp["col_vxs"][i]), float(inp["col_vzs"][i])]
+                for i in range(n_disks)
+            ],
+            "collision_type": ctype,
+            "restitution_e": e_used,
+            "mu_k": float(inp["col_mu_k"]),
+        }}
+    if scenario == "spring":
+        return {"computed": sim, "inputs": {
+            "m_kg": inp["spring_m"], "k_N_per_m": inp["spring_k"],
+            "x0_m": inp["spring_x0"], "v0_mps": inp["spring_v0"],
+        }}
+    if scenario == "photoelectric":
+        metal = data_loader.metal_by_id(inp["pe_metal"])
+        return {"computed": sim, "inputs": {
+            "frequency_Hz": inp["pe_freq_hz"],
+            "intensity_rel": inp["pe_intensity_rel"],
+            "metal": metal["name"], "phi_eV": metal["work_function_eV"],
+        }}
+    if scenario == "de_broglie":
+        particle = data_loader.particle_by_id(inp["db_particle"])
+        return {"computed": sim, "inputs": {
+            "particle": particle["name"], "mass_kg": particle["mass_kg"],
+            "v_mps": inp["db_v_mps"], "v_over_c": inp["db_v_mps"] / C,
+        }}
+    return {"computed": sim, "inputs": {}}
+
+
+# --- Pre-compute sim + payload before Claude so the theater can render hero --
+_sim_pre = _compute_sim_only(scenario, inp)
+payload_inputs = _payload_inputs(scenario, _sim_pre, inp)
+narrative_subheader = "Why this happens"
 
 
 # ---------------------------------------------------------------------------
@@ -800,7 +988,7 @@ if should_run:
             user_payload=payload,
             schema=PhysicsResult,
             fallback=prompts.FALLBACK.get(scenario, prompts.FALLBACK["projectile"]),
-            max_tokens=1800,
+            max_tokens=2000,
         )
     st.session_state.phy_last_result = result
     st.session_state.phy_last_source = source
@@ -813,6 +1001,206 @@ source: str = st.session_state.phy_last_source
 ui.source_indicator(source)
 if result.confidence == "speculative":
     ui.speculation_banner()
+
+# Showcase preset callout banner (one-line "what to notice").
+if (
+    st.session_state.get("phy_active_scenario_preset")
+    and st.session_state.get("phy_active_preset_callout")
+):
+    ui.info_panel(f"💡 {st.session_state['phy_active_preset_callout']}")
+
+
+# ===========================================================================
+# Challenge mode gate — predict-then-reveal
+# ===========================================================================
+def _bucket(value: float, low: float, high: float) -> int:
+    """Return 0/1/2 for value < low, low ≤ value ≤ high, value > high."""
+    if value < low:
+        return 0
+    if value > high:
+        return 2
+    return 1
+
+
+def _challenge_questions(scn: str, sim: dict, inp: dict) -> list[dict]:
+    """Return a list of {question, options, correct_index} for the scenario.
+
+    Each option set has three labels; ``correct_index`` is derived from the
+    deterministic simulator output so the gold answers are always correct."""
+    qs: list[dict] = []
+    if not sim:
+        return qs
+
+    if scn == "projectile":
+        rng = float(sim.get("range_m", 0.0))
+        h = float(sim.get("max_height_m", 0.0))
+        qs.append({
+            "question": "How far will the projectile travel horizontally?",
+            "options": ["Less than 20 m", "Between 20 m and 80 m", "More than 80 m"],
+            "correct_index": _bucket(rng, 20.0, 80.0),
+        })
+        qs.append({
+            "question": "How high will the apex be?",
+            "options": ["Below 5 m", "Between 5 m and 30 m", "Above 30 m"],
+            "correct_index": _bucket(h, 5.0, 30.0),
+        })
+
+    elif scn == "incline":
+        verdict = str(sim.get("verdict", "static"))
+        options = ["Stays put (static)", "Slides UP the slope", "Slides DOWN the slope"]
+        correct = {"static": 0, "accelerating_up": 1, "accelerating_down": 2}.get(verdict, 0)
+        qs.append({
+            "question": "What does the block do?",
+            "options": options,
+            "correct_index": correct,
+        })
+
+    elif scn == "rollercoaster":
+        reaches = bool(all(sim.get("reachable", [True])))
+        qs.append({
+            "question": "Does the cart make it to the end of the track?",
+            "options": ["Yes — reaches every hill", "No — stalls partway"],
+            "correct_index": 0 if reaches else 1,
+        })
+        ke_end = float(sim.get("ke_J", [0.0])[-1])
+        mass = float(sim.get("mass_kg", inp.get("rc_mass", 100.0)))
+        v_end = (2.0 * ke_end / mass) ** 0.5 if ke_end > 0 and mass > 0 else 0.0
+        qs.append({
+            "question": "How fast will the cart be moving when it reaches the end?",
+            "options": ["Under 5 m/s", "Between 5 m/s and 20 m/s", "Over 20 m/s"],
+            "correct_index": _bucket(v_end, 5.0, 20.0),
+        })
+
+    elif scn == "collision":
+        # _sim_pre uses collision_1d, which exposes a `kind` summary.
+        ke_lost = float(sim.get("ke_lost", 0.0))
+        ke_before = float(sim.get("ke_before", 0.0)) or 1.0
+        loss_frac = ke_lost / ke_before
+        qs.append({
+            "question": "How much kinetic energy is lost in the collision?",
+            "options": ["Almost none (< 10 %)", "Some (10–60 %)", "A lot (> 60 %)"],
+            "correct_index": _bucket(loss_frac, 0.10, 0.60),
+        })
+
+    elif scn == "spring":
+        period = float(sim.get("period_s", 0.0))
+        qs.append({
+            "question": "About how long does one full oscillation take?",
+            "options": ["Under 0.1 s", "Between 0.1 s and 1 s", "Over 1 s"],
+            "correct_index": _bucket(period, 0.1, 1.0),
+        })
+
+    elif scn == "photoelectric":
+        emits = bool(sim.get("emits_electrons", False))
+        qs.append({
+            "question": "Do any electrons get ejected?",
+            "options": ["Yes — electrons fly out", "No — nothing happens"],
+            "correct_index": 0 if emits else 1,
+        })
+        if emits:
+            ke = float(sim.get("ke_max_eV", 0.0))
+            qs.append({
+                "question": "What's the maximum kinetic energy per electron?",
+                "options": ["Under 1 eV", "Between 1 eV and 3 eV", "Over 3 eV"],
+                "correct_index": _bucket(ke, 1.0, 3.0),
+            })
+
+    elif scn == "de_broglie":
+        lam = float(sim.get("wavelength_m", 0.0))
+        # Buckets: < 1 pm, 1 pm – 1 nm, > 1 nm
+        qs.append({
+            "question": "What's the de Broglie wavelength?",
+            "options": [
+                "Below 1 pm (10⁻¹² m) — way smaller than an atom",
+                "Between 1 pm and 1 nm — atomic scale",
+                "Above 1 nm — bigger than an atom",
+            ],
+            "correct_index": _bucket(lam, 1e-12, 1e-9),
+        })
+
+    return qs
+
+
+if st.session_state.phy_challenge_mode:
+    _ch_questions = _challenge_questions(scenario, _sim_pre, inp)
+    _revealed = (
+        st.session_state.get("phy_challenge_revealed_sig") == input_signature
+    )
+    if _ch_questions and not _revealed:
+        ui.info_panel(
+            "🎯 <b>Challenge mode:</b> commit your predictions before the answer is revealed."
+        )
+        with st.form("phy_challenge_form", clear_on_submit=False):
+            picks: list[int] = []
+            for qi, q in enumerate(_ch_questions):
+                choice = st.radio(
+                    f"**Q{qi + 1}. {q['question']}**",
+                    options=list(range(len(q["options"]))),
+                    format_func=lambda i, opts=q["options"]: opts[i],
+                    index=0,
+                    key=f"phy_pred_{qi}",
+                )
+                picks.append(int(choice))
+            submit_pred = st.form_submit_button(
+                "🔮 Reveal the answer", type="primary",
+                use_container_width=True,
+            )
+        if submit_pred:
+            st.session_state.phy_challenge_prediction = picks
+            st.session_state.phy_challenge_revealed_sig = input_signature
+            st.rerun()
+        st.stop()
+    elif _ch_questions and _revealed:
+        picks = st.session_state.get("phy_challenge_prediction") or []
+        score = 0
+        rows: list[tuple[str, str, str, bool]] = []
+        for qi, q in enumerate(_ch_questions):
+            user_idx = picks[qi] if qi < len(picks) else -1
+            correct_idx = int(q["correct_index"])
+            ok = user_idx == correct_idx
+            score += int(ok)
+            rows.append((
+                q["question"],
+                q["options"][user_idx] if 0 <= user_idx < len(q["options"]) else "—",
+                q["options"][correct_idx],
+                ok,
+            ))
+        total = len(_ch_questions)
+        celebrate = (
+            "Perfect prediction!" if score == total else
+            "Great instincts — see the reveal below." if score >= max(1, total // 2 + 1)
+            else "Cool — let's see what really happens."
+        )
+        st.markdown(
+            f"""<div style='background:linear-gradient(90deg,#10b981,#3b82f6);
+            padding:12px 16px;border-radius:10px;color:white;margin-bottom:12px;'>
+            <div style='font-size:1.3rem;font-weight:600;'>🎉 Score: {score} / {total}</div>
+            <div style='font-size:0.9rem;opacity:0.9;'>{celebrate}</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+        for question, you, ans, ok in rows:
+            mark = "✅" if ok else "❌"
+            st.markdown(
+                f"- {mark} <b>{question}</b> · you said <code>{you}</code> · "
+                f"answer: <code>{ans}</code>",
+                unsafe_allow_html=True,
+            )
+
+# ----- 🎬 Apparatus Theater hero ----------------------------------------
+st.subheader("🎬 Apparatus Theater")
+components.html(
+    render_theater(
+        scenario, _sim_pre, _theater_inp(scenario, inp),
+        caption=result.visual_caption,
+        dramatic=result.dramatic_moment,
+    ),
+    height=theater_height(scenario),
+)
+
+# ----- 🔎 Detailed analysis charts (old default view, now an expander) ----
+with st.expander("🔎 Detailed analysis charts", expanded=False):
+    _payload_and_render()
 
 st.subheader(
     "📝 Scenario summary",
@@ -868,6 +1256,36 @@ if clicked:
     st.session_state.pop("phy_last_signature", None)
     st.toast(f"Exploring: {clicked}")
     st.rerun()
+
+# ----- 🧠 Quiz panel ------------------------------------------------------
+if result.quiz:
+    with st.expander("🧠 Quiz me on this scenario", expanded=False):
+        st.caption("Pick an answer, then click *Reveal* to check yourself.")
+        for qi, q in enumerate(result.quiz):
+            st.markdown(f"**Q{qi + 1}. {q.question}**")
+            ans_key = f"phy_quiz_{input_signature[:12]}_{qi}_ans"
+            rev_key = f"phy_quiz_{input_signature[:12]}_{qi}_rev"
+            choice = st.radio(
+                "Your answer:",
+                options=q.choices,
+                key=ans_key,
+                label_visibility="collapsed",
+                index=None,
+            )
+            cols = st.columns([1, 5])
+            with cols[0]:
+                if st.button("Reveal", key=f"btn_{rev_key}"):
+                    st.session_state[rev_key] = True
+            if st.session_state.get(rev_key):
+                correct = q.choices[q.correct_index]
+                if choice == correct:
+                    st.success(f"✅ Correct — {q.explanation}")
+                else:
+                    st.error(
+                        f"❌ Answer: **{correct}**" +
+                        (f" — {q.explanation}" if q.explanation else "")
+                    )
+            st.markdown("---")
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "galileo_tower",
+    "label": "🗼 Galileo's Tower",
+    "scenario": "projectile",
+    "blurb": "Drop a ball straight down from 55 m and watch gravity alone pull it to the ground in ~3 s — no horizontal motion, pure free fall.",
+    "inputs": {"v0": 0.1, "angle_deg": 90.0, "g": 9.81, "y0": 55.0},
+    "callout": "Galileo's claim: heavy and light objects fall together. Try it on the Moon (g=1.62)."
+  },
+  {
+    "id": "max_range_45",
+    "label": "🎯 Max-range cannon",
+    "scenario": "projectile",
+    "blurb": "Classic 45° artillery shot from ground level — the angle that wrings the most horizontal distance out of a given speed.",
+    "inputs": {"v0": 40.0, "angle_deg": 45.0, "g": 9.81, "y0": 0.0},
+    "callout": "From level ground, 45° wins because sin(2θ) peaks there."
+  },
+  {
+    "id": "mars_kick",
+    "label": "🔴 Field goal on Mars",
+    "scenario": "projectile",
+    "blurb": "Same kick, weaker gravity. Watch the ball float much higher and travel three times farther than on Earth.",
+    "inputs": {"v0": 25.0, "angle_deg": 50.0, "g": 3.71, "y0": 0.0},
+    "callout": "Lower g stretches time-of-flight; range scales as v₀²/g."
+  },
+  {
+    "id": "snowy_ramp",
+    "label": "🏔️ Snow on Steel",
+    "scenario": "incline",
+    "blurb": "Place a heavy steel crate on an oiled steel ramp. Tip the slope past the critical angle and friction snaps — the block slides.",
+    "inputs": {"incline_mass": 20.0, "incline_angle": 25.0, "incline_material": "steel_steel_oiled", "incline_f_applied": 0.0},
+    "callout": "Critical angle: tan(θ_c) = μ_s. Try changing material to see μ_s in action."
+  },
+  {
+    "id": "rubber_grip",
+    "label": "🛞 Rubber bites the road",
+    "scenario": "incline",
+    "blurb": "Dry rubber on concrete clings to a steep ramp without sliding — that's why your tires hold the road on a hill.",
+    "inputs": {"incline_mass": 10.0, "incline_angle": 35.0, "incline_material": "rubber_dry_concrete", "incline_f_applied": 0.0},
+    "callout": "High μ_s lets the block stay static at angles a slippery surface couldn't survive."
+  },
+  {
+    "id": "coaster_loop_ok",
+    "label": "🎢 Reaches every hill",
+    "scenario": "rollercoaster",
+    "blurb": "A tall first hill banks enough energy to crest every following hill, even with friction nibbling at each segment.",
+    "inputs": {"rc_h0": 60.0, "rc_h1": 25.0, "rc_h2": 40.0, "rc_mu_k": 0.04, "rc_mass": 250.0},
+    "callout": "PE→KE→PE handoff; friction slowly drains the total."
+  },
+  {
+    "id": "coaster_stall",
+    "label": "🛑 Hill too tall",
+    "scenario": "rollercoaster",
+    "blurb": "A second hill that's taller than the first leaves the cart stranded — gravity gives back exactly what it took, friction makes it worse.",
+    "inputs": {"rc_h0": 30.0, "rc_h1": 5.0, "rc_h2": 35.0, "rc_mu_k": 0.05, "rc_mass": 200.0},
+    "callout": "Once total energy < m·g·h_target, the cart cannot climb the hill."
+  },
+  {
+    "id": "newtons_cradle",
+    "label": "🪀 Newton's Cradle",
+    "scenario": "collision",
+    "blurb": "Two equal-mass balls in a perfectly elastic head-on collision swap velocities — the swung ball stops, the still ball flies off.",
+    "inputs": {"col_n": 2, "col_masses": [1.0, 1.0, 1.5, 1.0, 0.8], "col_vxs": [4.0, 0.0, 0.5, -0.3, -1.0], "col_vzs": [0.0, 0.0, -1.5, 1.5, -1.0], "col_type": "elastic", "col_e": 1.0, "col_mu_k": 0.0, "col_plane_x": 10.0, "col_plane_z": 6.0},
+    "callout": "Elastic + equal masses ⇒ perfect velocity swap."
+  },
+  {
+    "id": "crumple_zone",
+    "label": "💥 Sticky crash",
+    "scenario": "collision",
+    "blurb": "Two cars lock bumpers in a perfectly plastic collision. Momentum is preserved, but a huge chunk of KE vanishes into crumpled metal.",
+    "inputs": {"col_n": 2, "col_masses": [1.5, 1.0, 1.5, 1.0, 0.8], "col_vxs": [5.0, -1.0, 0.5, -0.3, -1.0], "col_vzs": [0.0, 0.0, -1.5, 1.5, -1.0], "col_type": "plastic", "col_e": 0.0, "col_mu_k": 0.0, "col_plane_x": 10.0, "col_plane_z": 6.0},
+    "callout": "Plastic collisions trade KE for deformation — exactly what crumple zones are designed to do."
+  },
+  {
+    "id": "tuning_fork",
+    "label": "🎵 Tuning fork (440 Hz)",
+    "scenario": "spring",
+    "blurb": "A stiff spring on a light mass vibrates fast enough to land near a musical 'A' (~440 Hz when modeled as SHM).",
+    "inputs": {"spring_m": 0.001, "spring_k": 7700.0, "spring_x0": 0.001, "spring_v0": 0.0},
+    "callout": "f = 1/(2π)·√(k/m). Higher k or lower m → higher pitch."
+  },
+  {
+    "id": "soft_spring_swing",
+    "label": "🌀 Slow oscillator",
+    "scenario": "spring",
+    "blurb": "A heavy block on a soft spring takes nearly 2 seconds per swing — visible enough to count beats by hand.",
+    "inputs": {"spring_m": 5.0, "spring_k": 50.0, "spring_x0": 0.3, "spring_v0": 0.0},
+    "callout": "Period grows with √m and shrinks with √k."
+  },
+  {
+    "id": "threshold_hunt",
+    "label": "💡 Just below threshold",
+    "scenario": "photoelectric",
+    "blurb": "Aim red light at cesium and crank the intensity to 100%. No matter how bright, frequency is too low — no electrons eject.",
+    "inputs": {"pe_metal": "cesium", "pe_freq_hz": 4.5e14, "pe_intensity_rel": 1.0},
+    "callout": "Disproves the wave model — intensity doesn't help below f₀ = φ/h."
+  },
+  {
+    "id": "uv_pop",
+    "label": "💜 UV pops electrons",
+    "scenario": "photoelectric",
+    "blurb": "Switch to a UV lamp on zinc. Each photon now packs more than the work function — electrons fly out with measurable kinetic energy.",
+    "inputs": {"pe_metal": "zinc", "pe_freq_hz": 1.4e15, "pe_intensity_rel": 0.4, "pe_phi": 4.33},
+    "callout": "KE_max = h·f − φ. Brighter light = more electrons, not faster ones."
+  },
+  {
+    "id": "electron_wave",
+    "label": "🌊 Electron diffraction",
+    "scenario": "de_broglie",
+    "blurb": "An electron at 1% of light speed has a wavelength comparable to atomic spacing — exactly what makes electron microscopes possible.",
+    "inputs": {"db_particle": "electron", "db_v_mps": 3.0e6, "db_d_nm": 100.0, "db_L_m": 1.0},
+    "callout": "λ ≈ 0.24 nm at v = 1% c. Crystals diffract this wavelength."
+  },
+  {
+    "id": "baseball_wave",
+    "label": "⚾ Baseball matter wave",
+    "scenario": "de_broglie",
+    "blurb": "A 145 g baseball at 40 m/s has a wavelength smaller than a proton. That's why we never see baseballs diffract.",
+    "inputs": {"db_particle": "baseball", "db_v_mps": 40.0, "db_d_nm": 100.0, "db_L_m": 1.0},
+    "callout": "λ ≈ 10⁻³⁴ m for everyday objects — wave behavior is completely hidden."
+  }
+]

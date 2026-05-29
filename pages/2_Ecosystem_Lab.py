@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from curious_mind import llm, ui
 from curious_mind.ecosystem import data_loader, prompts
 from curious_mind.ecosystem.schemas import EcosystemResult
+from curious_mind.ecosystem.theater import biome_theater_height, render_biome_theater
 from curious_mind.ecosystem.visuals import (
     climate_comparison_figure,
     food_web_figure,
@@ -68,6 +70,31 @@ else:
     for k, v in _default_inputs().items():
         st.session_state.eco_inputs.setdefault(k, v)
 
+
+def _apply_eco_scenario(scn: dict) -> None:
+    """Load a Showcase preset into session_state.eco_inputs and force a rerun."""
+    base = _default_inputs()
+    sc_inputs = scn.get("inputs", {}) or {}
+    new = {**base, **sc_inputs}
+    # Make sure populations + dicts are proper types after JSON roundtrip.
+    new["populations"] = {str(k): float(v) for k, v in (new.get("populations") or {}).items()}
+    new["protect"] = {str(k): float(v) for k, v in (new.get("protect") or {}).items()}
+    new["hunt"] = {str(k): float(v) for k, v in (new.get("hunt") or {}).items()}
+    st.session_state.eco_inputs = new
+    # Reset widget keys so the new biome/species selection takes effect.
+    for s in data_loader.load_species():
+        st.session_state[f"chk_{s['id']}"] = (s["id"] in new["species_ids"])
+    for key in list(st.session_state.keys()):
+        if key.startswith(("pop_", "protect_", "hunt_")):
+            del st.session_state[key]
+    st.session_state.pop("eco_last_result", None)
+    st.session_state.pop("eco_last_signature", None)
+    st.session_state.pop("eco_challenge_revealed_sig", None)
+    st.session_state.pop("eco_challenge_prediction", None)
+    st.session_state["eco_active_scenario_preset"] = scn.get("id", "")
+    st.session_state["eco_active_preset_callout"] = scn.get("callout", "")
+
+
 biomes = data_loader.load_biomes()
 species_all = data_loader.load_species()
 disturbances = data_loader.load_disturbances()
@@ -86,6 +113,20 @@ def _default_pop_for(species: dict) -> int:
 
 
 with st.sidebar:
+    # -------- Showcase preset menu ----------------------------------------
+    with st.expander("🧙 Showcase experiments", expanded=False):
+        st.caption("One-click curated biomes + species + disturbance.")
+        _scenarios = data_loader.load_scenarios()
+        for s in _scenarios:
+            if st.button(s["label"], key=f"eco_scn_{s['id']}", use_container_width=True):
+                _apply_eco_scenario(s)
+                st.toast(f"Loaded: {s['label']}")
+                st.rerun()
+            if s.get("blurb"):
+                st.caption(s["blurb"])
+        if not _scenarios:
+            st.caption("_(No scenarios.json found.)_")
+
     st.markdown("### Biome")
     biome_id = st.selectbox(
         "Pick a biome",
@@ -262,13 +303,31 @@ with st.sidebar:
         "hunt": hunt,
     }
 
+    # -------- Challenge mode toggle ---------------------------------------
+    st.session_state.setdefault("eco_challenge_mode", False)
+    st.session_state.eco_challenge_mode = st.toggle(
+        "🎯 Challenge mode",
+        value=st.session_state.eco_challenge_mode,
+        help="Hides the answer until you commit a prediction. Great for "
+             "classroom 'guess first' moments.",
+    )
+
     st.divider()
+    inputs_for_save = {
+        **st.session_state.eco_inputs,
+        "challenge_mode": st.session_state.eco_challenge_mode,
+    }
     loaded = render_persistence_sidebar(
-        "ecosystem", st.session_state.eco_inputs,
+        "ecosystem", inputs_for_save,
         title_default=biome_lookup[biome_id]["name"],
     )
     if loaded:
+        st.session_state.eco_challenge_mode = bool(loaded.pop("challenge_mode", False))
         st.session_state.eco_inputs = {**_default_inputs(), **loaded}
+        st.session_state.pop("eco_last_result", None)
+        st.session_state.pop("eco_last_signature", None)
+        st.session_state.pop("eco_challenge_revealed_sig", None)
+        st.session_state.pop("eco_challenge_prediction", None)
         st.rerun()
 
     run_btn = st.button("🌱 Run scenario", type="primary", use_container_width=True)
@@ -319,6 +378,214 @@ sim_t, sim_pops = simulate_populations(
     hunt=inputs["hunt"],
 )
 final_pops = {sid: vals[-1] for sid, vals in sim_pops.items()}
+
+# ---- LLM cascade narrative ------------------------------------------
+# Run BEFORE charts so the theater hero can use Claude's caption + moment.
+import json as _json
+
+kb = data_loader.relevant_kb_subset(
+    inputs["biome_id"], inputs["species_ids"], inputs["disturbance_id"]
+)
+payload = {
+    "biome_id": inputs["biome_id"],
+    "species_with_populations": [
+        {**species_lookup[sid], "initial_population": inputs["populations"].get(sid, 100)}
+        for sid in inputs["species_ids"]
+    ],
+    "disturbance": kb["disturbance"],
+    "disturbance_year": inputs["disturbance_year"],
+    "time_horizon_years": inputs["horizon_years"],
+    "climate_dT_C": inputs["climate_dT_C"],
+    "climate_dP_pct": inputs["climate_dP_pct"],
+    "protect": inputs["protect"],
+    "hunt": inputs["hunt"],
+    "knowledge_base": kb,
+    # If the user clicked a follow-up, fold it into the payload so it both
+    # reaches Claude AND changes the cache key (otherwise we'd hit the cache
+    # and show the same answer again).
+    "user_question": st.session_state.get("eco_user_question"),
+}
+input_signature = _json.dumps(payload, sort_keys=True, default=str)
+should_run = (
+    run_btn
+    or "eco_last_result" not in st.session_state
+    or st.session_state.get("eco_last_signature") != input_signature
+)
+if should_run:
+    with st.spinner("Reasoning over the food web…"):
+        result, source = llm.call_structured(
+            domain="ecosystem",
+            system_prompt=prompts.SYSTEM_PROMPT,
+            user_payload=payload,
+            schema=EcosystemResult,
+            fallback=prompts.FALLBACK,
+            max_tokens=3500,
+        )
+    st.session_state.eco_last_result = result
+    st.session_state.eco_last_source = source
+    st.session_state.eco_last_signature = input_signature
+
+result: EcosystemResult = st.session_state.eco_last_result
+source: str = st.session_state.eco_last_source
+
+ui.source_indicator(source)
+if result.confidence == "speculative":
+    ui.speculation_banner()
+
+# Showcase preset callout banner (one-line "what to notice").
+if (
+    st.session_state.get("eco_active_scenario_preset")
+    and st.session_state.get("eco_active_preset_callout")
+):
+    ui.info_panel(f"💡 {st.session_state['eco_active_preset_callout']}")
+
+
+# ===========================================================================
+# Challenge mode gate — predict-then-reveal
+# ===========================================================================
+def _eco_recovery_bucket(years: int | None, has_disturbance: bool) -> int:
+    """0 = none/no disturbance, 1 = <5 yr, 2 = 5–25 yr, 3 = >25 yr."""
+    if not has_disturbance or years is None:
+        return 0
+    if years < 5:
+        return 1
+    if years <= 25:
+        return 2
+    return 3
+
+
+def _eco_challenge_questions(
+    res: EcosystemResult,
+    inp: dict,
+    final_pops_: dict[str, float],
+) -> list[dict]:
+    """Return predict-then-reveal MCQs derived from sim + Claude's result."""
+    out: list[dict] = []
+
+    # Q1: biodiversity trend ------------------------------------------------
+    biodiv_opts = [
+        "Biodiversity goes UP", "Stays the same",
+        "Goes DOWN", "Collapses",
+    ]
+    biodiv_idx = {
+        "increases": 0, "stable": 1, "decreases": 2, "collapses": 3,
+    }.get(res.biodiversity_index_change, 1)
+    out.append({
+        "question": "What happens to overall biodiversity over the horizon?",
+        "options": biodiv_opts,
+        "correct_index": biodiv_idx,
+    })
+
+    # Q2: does any species go locally extinct in the simulator? ------------
+    init = inp.get("populations") or {}
+    extirpated_sim = any(
+        float(final_pops_.get(sid, 0.0)) < 1.0 and float(init.get(sid, 0.0)) > 0
+        for sid in inp.get("species_ids", [])
+    )
+    out.append({
+        "question": "Does any species locally go extinct?",
+        "options": ["Yes — at least one species vanishes", "No — they all survive"],
+        "correct_index": 0 if extirpated_sim else 1,
+    })
+
+    # Q3: recovery timescale (only if there's a disturbance) ---------------
+    has_dist = bool(inp.get("disturbance_id"))
+    if has_dist:
+        rec_opts = [
+            "Doesn't recover within horizon",
+            "Under 5 years",
+            "5–25 years",
+            "Over 25 years",
+        ]
+        rb = _eco_recovery_bucket(res.recovery_timescale_years, True)
+        out.append({
+            "question": "How long until the system looks like it did before the disturbance?",
+            "options": rec_opts,
+            "correct_index": rb,
+        })
+
+    return out
+
+
+if st.session_state.eco_challenge_mode:
+    _ch_q = _eco_challenge_questions(result, inputs, final_pops)
+    _revealed = (
+        st.session_state.get("eco_challenge_revealed_sig") == input_signature
+    )
+    if _ch_q and not _revealed:
+        ui.info_panel(
+            "🎯 <b>Challenge mode:</b> commit your predictions before the answer is revealed."
+        )
+        with st.form("eco_challenge_form", clear_on_submit=False):
+            picks: list[int] = []
+            for qi, q in enumerate(_ch_q):
+                choice = st.radio(
+                    f"**Q{qi + 1}. {q['question']}**",
+                    options=list(range(len(q["options"]))),
+                    format_func=lambda i, opts=q["options"]: opts[i],
+                    index=0,
+                    key=f"eco_pred_{qi}",
+                )
+                picks.append(int(choice))
+            submit_pred = st.form_submit_button(
+                "🔮 Reveal the answer", type="primary",
+                use_container_width=True,
+            )
+        if submit_pred:
+            st.session_state.eco_challenge_prediction = picks
+            st.session_state.eco_challenge_revealed_sig = input_signature
+            st.rerun()
+        st.stop()
+    elif _ch_q and _revealed:
+        picks = st.session_state.get("eco_challenge_prediction") or []
+        score = 0
+        rows: list[tuple[str, str, str, bool]] = []
+        for qi, q in enumerate(_ch_q):
+            user_idx = picks[qi] if qi < len(picks) else -1
+            correct_idx = int(q["correct_index"])
+            ok = user_idx == correct_idx
+            score += int(ok)
+            rows.append((
+                q["question"],
+                q["options"][user_idx] if 0 <= user_idx < len(q["options"]) else "—",
+                q["options"][correct_idx],
+                ok,
+            ))
+        total = len(_ch_q)
+        celebrate = (
+            "Perfect prediction!" if score == total else
+            "Great instincts — see the reveal below." if score >= max(1, total // 2 + 1)
+            else "Cool — let's see what really happens."
+        )
+        st.markdown(
+            f"""<div style='background:linear-gradient(90deg,#10b981,#3b82f6);
+            padding:12px 16px;border-radius:10px;color:white;margin-bottom:12px;'>
+            <div style='font-size:1.3rem;font-weight:600;'>🎉 Score: {score} / {total}</div>
+            <div style='font-size:0.9rem;opacity:0.9;'>{celebrate}</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+        for question, you, ans, ok in rows:
+            mark = "✅" if ok else "❌"
+            st.markdown(
+                f"- {mark} <b>{question}</b> · you said <code>{you}</code> · "
+                f"answer: <code>{ans}</code>",
+                unsafe_allow_html=True,
+            )
+
+# ---- 🎬 Living Biome Theater hero ------------------------------------
+st.subheader("🎬 Living Biome Theater")
+components.html(
+    render_biome_theater(
+        inputs["biome_id"],
+        species_records,
+        final_pops,
+        caption=result.visual_caption,
+        dramatic=result.dramatic_moment,
+        seed=hash(input_signature) & 0xFFFFFFFF,
+    ),
+    height=biome_theater_height(),
+)
 
 # Food web — always rendered, no LLM needed
 left, right = st.columns([1, 1])
@@ -416,58 +683,6 @@ if abs(inputs["climate_dT_C"]) > 0.01 or abs(inputs["climate_dP_pct"]) > 0.01:
         ),
         use_container_width=True,
     )
-
-# ---- LLM cascade narrative ------------------------------------------
-import json as _json
-
-kb = data_loader.relevant_kb_subset(
-    inputs["biome_id"], inputs["species_ids"], inputs["disturbance_id"]
-)
-payload = {
-    "biome_id": inputs["biome_id"],
-    "species_with_populations": [
-        {**species_lookup[sid], "initial_population": inputs["populations"].get(sid, 100)}
-        for sid in inputs["species_ids"]
-    ],
-    "disturbance": kb["disturbance"],
-    "disturbance_year": inputs["disturbance_year"],
-    "time_horizon_years": inputs["horizon_years"],
-    "climate_dT_C": inputs["climate_dT_C"],
-    "climate_dP_pct": inputs["climate_dP_pct"],
-    "protect": inputs["protect"],
-    "hunt": inputs["hunt"],
-    "knowledge_base": kb,
-    # If the user clicked a follow-up, fold it into the payload so it both
-    # reaches Claude AND changes the cache key (otherwise we'd hit the cache
-    # and show the same answer again).
-    "user_question": st.session_state.get("eco_user_question"),
-}
-input_signature = _json.dumps(payload, sort_keys=True, default=str)
-should_run = (
-    run_btn
-    or "eco_last_result" not in st.session_state
-    or st.session_state.get("eco_last_signature") != input_signature
-)
-if should_run:
-    with st.spinner("Reasoning over the food web…"):
-        result, source = llm.call_structured(
-            domain="ecosystem",
-            system_prompt=prompts.SYSTEM_PROMPT,
-            user_payload=payload,
-            schema=EcosystemResult,
-            fallback=prompts.FALLBACK,
-            max_tokens=3000,
-        )
-    st.session_state.eco_last_result = result
-    st.session_state.eco_last_source = source
-    st.session_state.eco_last_signature = input_signature
-
-result: EcosystemResult = st.session_state.eco_last_result
-source: str = st.session_state.eco_last_source
-
-ui.source_indicator(source)
-if result.confidence == "speculative":
-    ui.speculation_banner()
 
 st.subheader(
     "Scenario summary",
@@ -591,6 +806,36 @@ if clicked:
     st.session_state.pop("eco_last_signature", None)
     st.toast(f"Exploring: {clicked}")
     st.rerun()
+
+# ---- 🧠 Quiz panel ---------------------------------------------------
+if result.quiz:
+    with st.expander("🧠 Quiz me on this ecosystem", expanded=False):
+        st.caption("Pick an answer, then click *Reveal* to check yourself.")
+        for qi, q in enumerate(result.quiz):
+            st.markdown(f"**Q{qi + 1}. {q.question}**")
+            ans_key = f"eco_quiz_{input_signature[:12]}_{qi}_ans"
+            rev_key = f"eco_quiz_{input_signature[:12]}_{qi}_rev"
+            choice = st.radio(
+                "Your answer:",
+                options=q.choices,
+                key=ans_key,
+                label_visibility="collapsed",
+                index=None,
+            )
+            cols = st.columns([1, 5])
+            with cols[0]:
+                if st.button("Reveal", key=f"btn_{rev_key}"):
+                    st.session_state[rev_key] = True
+            if st.session_state.get(rev_key):
+                correct = q.choices[q.correct_index]
+                if choice == correct:
+                    st.success(f"✅ Correct — {q.explanation}")
+                else:
+                    st.error(
+                        f"❌ Answer: **{correct}**" +
+                        (f" — {q.explanation}" if q.explanation else "")
+                    )
+            st.markdown("---")
 
 # ---- Concept glossary -----------------------------------------------
 with st.expander("📖 Concepts"):

@@ -7,7 +7,7 @@ cover every scenario.
 
 from __future__ import annotations
 
-from .schemas import PhysicsResult
+from .schemas import PhysicsResult, QuizItem
 
 SYSTEM_PROMPT = """You are a high-school physics teacher who explains scenarios in plain language.
 The user picks one scenario at a time; the deterministic numbers (forces, trajectories,
@@ -33,7 +33,22 @@ GROUND RULES
 6. If ``user_question`` is non-empty, address it in the summary AND make sure
    ``intuition`` directly speaks to it.
 
-LENGTH BUDGET (must fit in ~1800 tokens — keep prose tight!)
+VISUAL CUES (for the Apparatus Theater animation above the narrative)
+- dramatic_moment: ONE vivid sentence (≤ 25 words) about the cool thing students should
+  watch for — e.g., "Notice how the ball spends almost all its time near the peak."
+  Make it pop. Reference computed numbers when it lands well.
+- visual_caption: a SHORT (≤ 12 words) banner that floats over the animation —
+  e.g., "Peak: 12.4 m · Range: 47 m". Punchy, numeric when possible.
+
+QUIZ (return 1–2 items in the ``quiz`` array; OK to return 0 if nothing tight fits)
+- Each item: ``question`` (1 sentence), ``choices`` (2–4 short strings), ``correct_index``
+  (0-based), and a one-sentence ``explanation``.
+- Tie each question to THIS scenario's computed numbers or qualitative behavior
+  (e.g., "What happens to the range if we double v₀?", "Will electrons eject if we
+   drop the frequency by 30%?"). Avoid generic textbook questions.
+- Keep choices short (≤ 8 words). Exactly ONE correct choice per item.
+
+LENGTH BUDGET (must fit in ~2000 tokens — keep prose tight!)
 - summary: 1–2 sentences citing the key computed numbers.
 - intuition: 2–3 sentences of plain-language "why".
 - key_concepts: 3–5 short labels (e.g. "Conservation of momentum", "Restitution").
@@ -41,6 +56,8 @@ LENGTH BUDGET (must fit in ~1800 tokens — keep prose tight!)
 - real_world_examples: 1–3 short bullets (sports, vehicles, lab demos, devices).
 - limitations_or_assumptions: 1–3 short bullets.
 - follow_ups: exactly 3, each ≤ 12 words.
+- dramatic_moment: ≤ 25 words.
+- visual_caption: ≤ 12 words.
 
 Always return the exact JSON schema specified — no prose outside the JSON.
 """
@@ -89,6 +106,24 @@ FALLBACK: dict[str, PhysicsResult] = {
             "What if gravity were half as strong?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Watch the ball linger near its peak — that's why catches look easy at the top of the arc."
+        ),
+        visual_caption="Apex hangtime · gravity bends the y-motion",
+        quiz=[
+            QuizItem(
+                question="If you double v₀ while keeping the launch angle, the range…",
+                choices=["doubles", "quadruples", "stays the same", "halves"],
+                correct_index=1,
+                explanation="Range scales with v₀² for level ground (R = v₀² sin(2θ)/g).",
+            ),
+            QuizItem(
+                question="From level ground, which angle gives the LONGEST range?",
+                choices=["30°", "45°", "60°", "75°"],
+                correct_index=1,
+                explanation="sin(2θ) is maxed at θ = 45°.",
+            ),
+        ],
     ),
 
     "incline": PhysicsResult(
@@ -128,6 +163,10 @@ FALLBACK: dict[str, PhysicsResult] = {
             "What changes with a heavier block?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Tilt past the critical angle and friction snaps — the block goes from glued to gliding in an instant."
+        ),
+        visual_caption="Static friction holds · then kinetic takes over",
     ),
 
     "rollercoaster": PhysicsResult(
@@ -167,6 +206,10 @@ FALLBACK: dict[str, PhysicsResult] = {
             "Why do real coasters use chain lifts?",
         ],
         confidence="probable",
+        dramatic_moment=(
+            "Every meter of hill drop becomes kinetic energy at the bottom — minus whatever friction steals along the way."
+        ),
+        visual_caption="PE ↔ KE swap · friction skims the total",
     ),
 
     "collision": PhysicsResult(
@@ -206,6 +249,10 @@ FALLBACK: dict[str, PhysicsResult] = {
             "Where does the lost energy actually go?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Total momentum survives the smash even when kinetic energy gets shredded into heat and sound."
+        ),
+        visual_caption="Σp before = Σp after · energy may vanish",
     ),
 
     "spring": PhysicsResult(
@@ -244,6 +291,10 @@ FALLBACK: dict[str, PhysicsResult] = {
             "What's the energy at half-amplitude?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Energy bounces between stretched spring and moving block, but never disappears — total stays constant."
+        ),
+        visual_caption="T = 2π√(m/k) · period is mass+stiffness only",
     ),
 
     "photoelectric": PhysicsResult(
@@ -283,6 +334,10 @@ FALLBACK: dict[str, PhysicsResult] = {
             "How is this used in solar panels?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Below the threshold frequency NO electrons eject — turn the lamp brighter and still nothing happens."
+        ),
+        visual_caption="KE_max = h·f − φ · color matters, not brightness",
     ),
 
     "de_broglie": PhysicsResult(
@@ -321,5 +376,9 @@ FALLBACK: dict[str, PhysicsResult] = {
             "How does this enable electron microscopes?",
         ],
         confidence="well_documented",
+        dramatic_moment=(
+            "Every object has a matter-wave — but a baseball's wavelength is smaller than a proton, so we never see it ripple."
+        ),
+        visual_caption="λ = h/p · waves of matter shrink with mass",
     ),
 }

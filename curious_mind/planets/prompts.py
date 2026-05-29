@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .schemas import PlanetResult, SurfaceConditions, TerraformingPlan
+from .schemas import PlanetResult, QuizItem, SurfaceConditions, TerraformingPlan
 
 SYSTEM_PROMPT = """You are a planetary scientist who reasons over a curated knowledge base of
 real stars, habitable-zone heuristics, atmospheric archetypes, and a small catalog of real
@@ -53,13 +53,38 @@ OUTPUT
    it is the user's chosen rotation period.)
 10. Always return the exact JSON schema specified — no prose outside the JSON.
 
-LENGTH BUDGET (must fit in ~3000 tokens — keep prose tight!)
+VISUAL CUES (Planet Forge & Sky View) — short, vivid, classroom-friendly:
+- dramatic_moment: ONE sentence (≤ 22 words) describing the most striking
+  visible thing about this world — what a kid would point at. Examples:
+  "A scarlet sunset bleeds across an ammonia haze you could chew on."
+  "Lava rivers carve the night side; the day side glows like a forge."
+  "Twin moons hang over a frozen blue ocean lit by a quiet red dwarf."
+- visual_caption: ≤ 12 words pinned to the scene as a caption.
+  Examples: "Tidal-locked terminator zone.", "Runaway greenhouse on Venus.",
+  "Sub-glacial ocean candidate."
+
+QUIZ (1–2 multiple-choice questions tied to THIS specific world):
+- quiz: 1–2 items. Each item has:
+  - question: a focused MCQ about THIS star + planet + atmosphere +
+    interventions. Use specific numbers from the input.
+  - choices: 3 or 4 short options. Exactly ONE is correct.
+  - correct_index: 0-based index of the correct choice.
+  - explanation: ≤ 25 words explaining why (≤ 1 sentence).
+- Pick questions that highlight the headline mechanism (tidal locking,
+  flare bombardment, runaway greenhouse, atmospheric escape, biosignature
+  interpretation, terraforming difficulty, etc.). Avoid generic textbook
+  questions.
+
+LENGTH BUDGET (must fit in ~3500 tokens — keep prose tight!)
 - verdict_reason: 2–3 sentences.
 - sky_description: 2 sentences.
 - plausible_life: 2 sentences.
 - comparison_note: 1 sentence.
 - abiogenesis_prospects: 2–4 sentences (only if seeding active, else empty).
 - terraforming.steps: each ≤ 18 words.
+- dramatic_moment: 1 sentence (≤ 22 words).
+- visual_caption: ≤ 12 words.
+- quiz: 1–2 items.
 """
 
 
@@ -104,4 +129,37 @@ FALLBACK = PlanetResult(
     ],
     terraforming=None,
     abiogenesis_prospects="",
+    dramatic_moment=(
+        "A dim red sun glares low on the horizon while violet flares streak the "
+        "twilight sky over a frozen, wind-scoured plain."
+    ),
+    visual_caption="Tidal-locked terminator zone.",
+    quiz=[
+        QuizItem(
+            question="Why is Proxima b's habitable-zone status not enough to guarantee surface life?",
+            choices=[
+                "The orbit is too eccentric to keep the temperature stable.",
+                "M-dwarf flares and likely tidal locking strip atmospheres and bake one face.",
+                "Proxima b is actually a gas giant with no surface.",
+            ],
+            correct_index=1,
+            explanation=(
+                "Being in the HZ only addresses temperature — flares and tidal locking still "
+                "make a global biosphere unlikely without a strong magnetic shield."
+            ),
+        ),
+        QuizItem(
+            question="What would help Proxima b's surface most?",
+            choices=[
+                "A stronger planetary magnetic field",
+                "A faster rotation rate",
+                "A smaller orbital distance",
+            ],
+            correct_index=0,
+            explanation=(
+                "A strong magnetosphere would deflect stellar wind and protect the atmosphere "
+                "from flare-driven escape."
+            ),
+        ),
+    ],
 )

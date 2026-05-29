@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import html as _html
 import json as _json
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from curious_mind import llm, ui
 from curious_mind.planets import data_loader, prompts
 from curious_mind.planets.schemas import PlanetResult
+from curious_mind.planets.theater import planet_theater_height, render_planet_theater
 from curious_mind.planets.visuals import (
     atmosphere_donut,
     injection_evolution_figure,
@@ -75,8 +78,100 @@ for k, v in _default_inputs().items():
     st.session_state.planet_inputs.setdefault(k, v)
 
 
+def _apply_planet_scenario(scn: dict) -> None:
+    """Overwrite planet_inputs with the scenario's preset values and bust cache."""
+    base = _default_inputs()
+    base.update(scn.get("inputs", {}))
+    st.session_state.planet_inputs = base
+    st.session_state.pop("planet_last_result", None)
+    st.session_state.pop("planet_last_signature", None)
+    st.session_state.pop("planet_user_question", None)
+    st.session_state.pop("planet_challenge_revealed_sig", None)
+    st.session_state.pop("planet_challenge_score", None)
+    st.session_state["planet_active_scenario"] = scn["id"]
+
+
+def _planet_temp_bucket(T_C: float) -> str:
+    if T_C < -50:
+        return "frozen (<−50 °C)"
+    if T_C < 0:
+        return "chilly (−50 to 0 °C)"
+    if T_C < 35:
+        return "temperate (0–35 °C)"
+    if T_C < 200:
+        return "hot (35–200 °C)"
+    return "inferno (>200 °C)"
+
+
+def _planet_challenge_questions(derived: dict, result: "PlanetResult", inputs: dict) -> list[dict]:
+    T_C = (
+        result.surface.avg_temperature_C
+        if result.surface.avg_temperature_C
+        else derived["greenhouse_surface_T_C"]
+    )
+    return [
+        {
+            "key": "verdict",
+            "prompt": "Will Claude rate this world as…?",
+            "choices": ["🟢 Habitable", "🟡 Extremophiles only", "🔴 Non-habitable"],
+            "answer": {
+                "habitable": "🟢 Habitable",
+                "extremophile_only": "🟡 Extremophiles only",
+                "non_habitable": "🔴 Non-habitable",
+            }.get(result.verdict, "🟡 Extremophiles only"),
+        },
+        {
+            "key": "temp",
+            "prompt": "What temperature bucket fits the surface?",
+            "choices": [
+                "frozen (<−50 °C)",
+                "chilly (−50 to 0 °C)",
+                "temperate (0–35 °C)",
+                "hot (35–200 °C)",
+                "inferno (>200 °C)",
+            ],
+            "answer": _planet_temp_bucket(T_C),
+        },
+        {
+            "key": "tidal",
+            "prompt": "Is this planet likely tidally locked to its star?",
+            "choices": ["🔒 Yes — tidally locked", "🔓 No — free rotation"],
+            "answer": (
+                "🔒 Yes — tidally locked"
+                if derived["tidal_locking_likely"]
+                else "🔓 No — free rotation"
+            ),
+        },
+    ]
+
+
 # ---- sidebar ---------------------------------------------------------------
 with st.sidebar:
+    with st.expander("🧙 Showcase worlds", expanded=False):
+        st.caption("One-click curated planets — handy for demos.")
+        scenarios = data_loader.load_scenarios()
+        for scn in scenarios:
+            cols = st.columns([1, 0.001])
+            if cols[0].button(
+                scn.get("label", scn["id"]),
+                key=f"planet_preset_{scn['id']}",
+                use_container_width=True,
+                help=scn.get("blurb", ""),
+            ):
+                _apply_planet_scenario(scn)
+                st.toast(f"Loaded: {scn.get('label', scn['id'])}")
+                st.rerun()
+
+    challenge_mode = st.toggle(
+        "🎯 Challenge mode",
+        value=bool(st.session_state.get("planet_challenge_mode", False)),
+        help=(
+            "Predict-then-reveal: guess the verdict, surface temperature bucket, "
+            "and tidal-locking status before seeing Claude's answer."
+        ),
+    )
+    st.session_state["planet_challenge_mode"] = challenge_mode
+
     st.markdown("### Star")
     star_options: list[str] = []
     for cls in _CLASS_ORDER:
@@ -315,11 +410,16 @@ with st.sidebar:
     }
 
     st.divider()
+    _inputs_for_save = {
+        **st.session_state.planet_inputs,
+        "challenge_mode": bool(st.session_state.get("planet_challenge_mode", False)),
+    }
     loaded = render_persistence_sidebar(
-        "planet", st.session_state.planet_inputs,
+        "planet", _inputs_for_save,
         title_default=f"{star_name} @ {distance_AU} AU",
     )
     if loaded:
+        st.session_state["planet_challenge_mode"] = bool(loaded.pop("challenge_mode", False))
         st.session_state.planet_inputs = {**_default_inputs(), **loaded}
         st.rerun()
 
@@ -374,6 +474,162 @@ derived = {
 
 density_g_per_cm3 = (inputs["mass_earth"] / (inputs["radius_earth"] ** 3)) * 5.51
 esi = data_loader.earth_similarity_index(inputs["radius_earth"], density_g_per_cm3, T_surf_C)
+
+# ---- LLM verdict (moved up so the theater can show Claude's caption) -------
+closest = data_loader.closest_real_exoplanet(
+    inputs["mass_earth"], inputs["radius_earth"], inputs["distance_AU"], spectral,
+)
+
+interventions = {
+    "magnetic_field": inputs["magnetic_field"],
+    "atmosphere_tweak": inputs["atmosphere_tweak"],
+    "terraforming_target": inputs["terraforming_target"],
+    "seeding": (
+        {
+            "what_to_seed": inputs["seeding_what"],
+            "where": inputs["seeding_where"],
+            "time_horizon": inputs["seeding_horizon"],
+        }
+        if inputs["seeding_what"] != "none"
+        else None
+    ),
+}
+
+payload = {
+    "star": star,
+    "orbit_AU": inputs["distance_AU"],
+    "planet": {
+        "mass_earth": inputs["mass_earth"],
+        "radius_earth": inputs["radius_earth"],
+        "density_g_per_cm3": density_g_per_cm3,
+        "earth_similarity_index": esi,
+    },
+    "atmosphere": atm,
+    "water_pct": inputs["water_pct"],
+    "moons": inputs["moons"],
+    "derived": derived,
+    "interventions": interventions,
+    "closest_real_exoplanet": closest,
+    "user_question": st.session_state.get("planet_user_question"),
+}
+
+input_signature = _json.dumps(payload, sort_keys=True, default=str)
+should_run = (
+    run_btn
+    or "planet_last_result" not in st.session_state
+    or st.session_state.get("planet_last_signature") != input_signature
+)
+
+if should_run:
+    with st.spinner("Computing habitability and sky conditions…"):
+        result, source = llm.call_structured(
+            domain="planets",
+            system_prompt=prompts.SYSTEM_PROMPT,
+            user_payload=payload,
+            schema=PlanetResult,
+            fallback=prompts.FALLBACK,
+            max_tokens=3500,
+        )
+    st.session_state.planet_last_result = result
+    st.session_state.planet_last_source = source
+    st.session_state.planet_last_signature = input_signature
+
+result: PlanetResult = st.session_state.planet_last_result
+source: str = st.session_state.planet_last_source
+
+# ---- Challenge gate state --------------------------------------------------
+_challenge_on = bool(st.session_state.get("planet_challenge_mode", False))
+_revealed = (not _challenge_on) or (
+    st.session_state.get("planet_challenge_revealed_sig") == input_signature
+)
+
+# ---- Living Planet Theater (hero) ------------------------------------------
+components.html(
+    render_planet_theater(
+        star=star,
+        star_color_hex=star_class_data["color_hex"],
+        distance_AU=inputs["distance_AU"],
+        radius_earth=inputs["radius_earth"],
+        atmosphere_id=inputs["atmosphere_id"],
+        surface_T_C=result.surface.avg_temperature_C if result.surface.avg_temperature_C else T_surf_C,
+        surface_pressure_atm=result.surface.surface_pressure_atm or atm.get("surface_pressure_atm", 1.0),
+        water_pct=int(inputs["water_pct"]),
+        moons=int(inputs["moons"]),
+        tidally_locked=_tidally_locked,
+        flare_risk=derived["flare_risk"],
+        verdict=result.verdict if _revealed else None,
+        dramatic=result.dramatic_moment if _revealed else "",
+        caption=result.visual_caption if _revealed else "",
+        seed=hash(input_signature) & 0xFFFFFF,
+    ),
+    height=planet_theater_height() + 8,
+)
+
+# ---- Active scenario callout (from Showcase preset) ------------------------
+_active_id = st.session_state.get("planet_active_scenario")
+if _active_id:
+    _scn = data_loader.scenario_by_id(_active_id)
+    if _scn and _scn.get("callout"):
+        ui.info_panel(
+            f"🧙 <b>{_html.escape(_scn.get('label', _scn['id']))}</b> — "
+            f"{_html.escape(_scn['callout'])}"
+        )
+
+# ---- Predict-then-Reveal form (Challenge mode) -----------------------------
+if not _revealed:
+    _q_list = _planet_challenge_questions(derived, result, inputs)
+    with st.form("planet_challenge_form"):
+        st.subheader("🎯 Predict before reveal")
+        st.caption(
+            "Make a guess for each. Submit to unlock Claude's verdict, the metrics, "
+            "and the sky description."
+        )
+        _predictions: dict[str, str] = {}
+        for q in _q_list:
+            _predictions[q["key"]] = st.radio(
+                q["prompt"], q["choices"], key=f"planet_pp_{q['key']}",
+            )
+        _submitted = st.form_submit_button("🔬 Reveal", type="primary")
+    if _submitted:
+        _score = 0
+        _rows = []
+        for q in _q_list:
+            ok = _predictions.get(q["key"]) == q["answer"]
+            if ok:
+                _score += 1
+            _rows.append({
+                "prompt": q["prompt"],
+                "user": _predictions.get(q["key"], ""),
+                "answer": q["answer"],
+                "ok": ok,
+            })
+        st.session_state["planet_challenge_revealed_sig"] = input_signature
+        st.session_state["planet_challenge_score"] = {
+            "sig": input_signature,
+            "score": _score,
+            "total": len(_q_list),
+            "rows": _rows,
+        }
+        st.rerun()
+    st.stop()
+
+# Score chip — only shown right after a reveal for the current signature
+_score_data = st.session_state.get("planet_challenge_score") or {}
+if _score_data.get("sig") == input_signature:
+    _s = _score_data["score"]
+    _t = _score_data["total"]
+    if _s == _t:
+        st.success(f"🎯 Perfect — {_s} / {_t}")
+    elif _s >= _t / 2:
+        st.info(f"🎯 Nice — {_s} / {_t}")
+    else:
+        st.warning(f"🎯 Tough one — {_s} / {_t}")
+    for row in _score_data["rows"]:
+        mark = "✅" if row["ok"] else "❌"
+        st.markdown(
+            f"- {mark} **{row['prompt']}**  \n"
+            f"  You guessed: `{row['user']}` · Truth: `{row['answer']}`"
+        )
 
 c1, c2 = st.columns([1, 1])
 with c1:
@@ -555,70 +811,6 @@ This **does not model**: atmospheric chemistry coupling, ocean–atmosphere exch
 biological feedbacks, or weathering. Real Earth-system models include all of these.
 """
             )
-
-# ---- LLM verdict -----------------------------------------------------------
-closest = data_loader.closest_real_exoplanet(
-    inputs["mass_earth"], inputs["radius_earth"], inputs["distance_AU"], spectral,
-)
-
-interventions = {
-    "magnetic_field": inputs["magnetic_field"],
-    "atmosphere_tweak": inputs["atmosphere_tweak"],
-    "terraforming_target": inputs["terraforming_target"],
-    "seeding": (
-        {
-            "what_to_seed": inputs["seeding_what"],
-            "where": inputs["seeding_where"],
-            "time_horizon": inputs["seeding_horizon"],
-        }
-        if inputs["seeding_what"] != "none"
-        else None
-    ),
-}
-
-payload = {
-    "star": star,
-    "orbit_AU": inputs["distance_AU"],
-    "planet": {
-        "mass_earth": inputs["mass_earth"],
-        "radius_earth": inputs["radius_earth"],
-        "density_g_per_cm3": density_g_per_cm3,
-        "earth_similarity_index": esi,
-    },
-    "atmosphere": atm,
-    "water_pct": inputs["water_pct"],
-    "moons": inputs["moons"],
-    "derived": derived,
-    "interventions": interventions,
-    "closest_real_exoplanet": closest,
-    # Inject follow-up question (if any) so Claude addresses it AND so the
-    # signature changes, breaking the cache.
-    "user_question": st.session_state.get("planet_user_question"),
-}
-
-input_signature = _json.dumps(payload, sort_keys=True, default=str)
-should_run = (
-    run_btn
-    or "planet_last_result" not in st.session_state
-    or st.session_state.get("planet_last_signature") != input_signature
-)
-
-if should_run:
-    with st.spinner("Computing habitability and sky conditions…"):
-        result, source = llm.call_structured(
-            domain="planets",
-            system_prompt=prompts.SYSTEM_PROMPT,
-            user_payload=payload,
-            schema=PlanetResult,
-            fallback=prompts.FALLBACK,
-            max_tokens=2400,
-        )
-    st.session_state.planet_last_result = result
-    st.session_state.planet_last_source = source
-    st.session_state.planet_last_signature = input_signature
-
-result: PlanetResult = st.session_state.planet_last_result
-source: str = st.session_state.planet_last_source
 
 ui.source_indicator(source)
 if result.confidence == "speculative":
@@ -844,3 +1036,27 @@ if clicked:
     st.session_state.pop("planet_last_signature", None)
     st.toast(f"Exploring: {clicked}")
     st.rerun()
+
+# ---- Quiz panel (1–2 MCQs Claude generated about THIS world) ---------------
+if result.quiz:
+    st.divider()
+    st.subheader("🧠 Quiz me on this world")
+    _qkey_prefix = f"planet_quiz_{(input_signature or '')[:12]}"
+    for idx, q in enumerate(result.quiz):
+        with st.expander(f"Question {idx + 1}: {q.question}", expanded=False):
+            picked = st.radio(
+                "Pick an answer:",
+                options=list(range(len(q.choices))),
+                format_func=lambda i, _q=q: _q.choices[i],
+                key=f"{_qkey_prefix}_q{idx}",
+                index=None,
+            )
+            if picked is not None:
+                if picked == q.correct_index:
+                    st.success(f"✅ Correct — {q.explanation}")
+                else:
+                    correct_text = q.choices[q.correct_index]
+                    st.error(
+                        f"❌ Not quite. Correct answer: **{correct_text}**.  \n"
+                        f"{q.explanation}"
+                    )

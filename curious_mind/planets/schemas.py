@@ -59,6 +59,40 @@ def _coerce_float(v: Any, default: float = 0.0) -> float:
         return default
 
 
+class QuizItem(BaseModel):
+    """A single MCQ Claude generates about the specific planet scenario."""
+
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+
+    question: str = ""
+    choices: list[str] = Field(default_factory=list)
+    correct_index: int = 0
+    explanation: str = ""
+
+    @field_validator("choices", mode="before")
+    @classmethod
+    def _coerce_choices(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            v = [v]
+        out = [str(c).strip() for c in v if str(c).strip()]
+        return out[:4]
+
+    @field_validator("correct_index", mode="before")
+    @classmethod
+    def _coerce_idx(cls, v):
+        try:
+            return max(0, int(v))
+        except (TypeError, ValueError):
+            return 0
+
+    @field_validator("question", "explanation", mode="before")
+    @classmethod
+    def _coerce_str(cls, v):
+        return "" if v is None else str(v)
+
+
 class SurfaceConditions(BaseModel):
     model_config = ConfigDict(extra="ignore")
     avg_temperature_C: float = 0.0
@@ -151,6 +185,13 @@ class PlanetResult(BaseModel):
     # New: optional speculative abiogenesis assessment (only when seeding scenario active)
     abiogenesis_prospects: str = ""
 
+    # ---- Spectacle hints (Planet Forge & Sky View) -----------------------
+    dramatic_moment: str = ""    # one vivid sentence about the headline visible thing
+    visual_caption: str = ""     # short caption pinned to the scene (≤ 12 words)
+
+    # ---- Quiz items (Challenge / Quiz panel) -----------------------------
+    quiz: list[QuizItem] = Field(default_factory=list)
+
     @field_validator("verdict", mode="before")
     @classmethod
     def _norm_v(cls, v):
@@ -187,8 +228,27 @@ class PlanetResult(BaseModel):
     @field_validator(
         "verdict_reason", "sky_description", "plausible_life",
         "closest_real_exoplanet_name", "comparison_note", "abiogenesis_prospects",
+        "dramatic_moment", "visual_caption",
         mode="before",
     )
     @classmethod
     def _coerce_str(cls, v):
         return "" if v is None else str(v)
+
+    @field_validator("quiz", mode="before")
+    @classmethod
+    def _coerce_quiz(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, dict):
+            v = [v]
+        return list(v)[:5]
+
+    @field_validator("quiz")
+    @classmethod
+    def _drop_bad_quiz(cls, v):
+        out = []
+        for q in v:
+            if len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
+                out.append(q)
+        return out[:2]

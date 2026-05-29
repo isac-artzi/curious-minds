@@ -1,0 +1,261 @@
+[
+  {
+    "id": "earth_today",
+    "label": "🌍 Earth today",
+    "blurb": "Baseline — the only planet we know hosts life.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 1.0,
+      "mass_earth": 1.0,
+      "radius_earth": 1.0,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 70,
+      "moons": 1,
+      "magnetic_field": "strong"
+    },
+    "callout": "Use this as the calibration anchor. Everything else compares to here."
+  },
+  {
+    "id": "mars_today",
+    "label": "🟥 Mars today",
+    "blurb": "Cold, thin air, no magnetosphere. A frozen desert.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 1.5,
+      "mass_earth": 0.107,
+      "radius_earth": 0.532,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "mars_like",
+      "water_pct": 2,
+      "moons": 2,
+      "magnetic_field": "none"
+    },
+    "callout": "Watch the pressure veto fire — 0.006 atm can't hold liquid water."
+  },
+  {
+    "id": "venus_today",
+    "label": "🟧 Venus today",
+    "blurb": "Runaway greenhouse — surface hot enough to melt lead.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 0.72,
+      "mass_earth": 0.815,
+      "radius_earth": 0.949,
+      "rotation_period_hours": 5832,
+      "atmosphere_id": "venus_like",
+      "water_pct": 0,
+      "moons": 0,
+      "magnetic_field": "none"
+    },
+    "callout": "92 atm of CO₂ + slow retrograde spin → 462 °C and lethal."
+  },
+  {
+    "id": "titan_today",
+    "label": "🟧 Titan today",
+    "blurb": "Methane lakes and a thick orange smog under a small sun.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 9.5,
+      "mass_earth": 0.0225,
+      "radius_earth": 0.404,
+      "rotation_period_hours": 382,
+      "atmosphere_id": "titan_like",
+      "water_pct": 0,
+      "moons": 0,
+      "magnetic_field": "none"
+    },
+    "callout": "Pre-biotic chemistry playground — but methane is the only available solvent."
+  },
+  {
+    "id": "proxima_b",
+    "label": "🔴 Proxima Centauri b",
+    "blurb": "Earth-mass world tidally locked to a flaring red dwarf.",
+    "inputs": {
+      "star_name": "Proxima Centauri",
+      "distance_AU": 0.05,
+      "mass_earth": 1.07,
+      "radius_earth": 1.1,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 50,
+      "moons": 0,
+      "magnetic_field": "weak"
+    },
+    "callout": "Closest exoplanet — but flares + tidal locking gut its surface biosphere prospects."
+  },
+  {
+    "id": "trappist_1e",
+    "label": "🌊 TRAPPIST-1 e",
+    "blurb": "Rocky habitable-zone world around an ultracool M-dwarf.",
+    "inputs": {
+      "star_name": "TRAPPIST-1",
+      "distance_AU": 0.029,
+      "mass_earth": 0.69,
+      "radius_earth": 0.92,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 80,
+      "moons": 0,
+      "magnetic_field": "strong"
+    },
+    "callout": "Best near-term JWST target — does a strong magnetic field save it?"
+  },
+  {
+    "id": "lhs_1140_b",
+    "label": "🟦 LHS 1140 b",
+    "blurb": "Dense super-Earth around a quiet old M-dwarf.",
+    "inputs": {
+      "star_name": "LHS 1140",
+      "distance_AU": 0.0936,
+      "mass_earth": 6.48,
+      "radius_earth": 1.73,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 65,
+      "moons": 0,
+      "magnetic_field": "strong"
+    },
+    "callout": "Quiet host star + thick atmosphere = one of the strongest HZ candidates."
+  },
+  {
+    "id": "teegarden_b",
+    "label": "🟡 Teegarden's Star b",
+    "blurb": "ESI ≈ 0.95 — among the most Earth-like by index alone.",
+    "inputs": {
+      "star_name": "Teegarden's Star",
+      "distance_AU": 0.0259,
+      "mass_earth": 1.05,
+      "radius_earth": 1.02,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 60,
+      "moons": 0,
+      "magnetic_field": "strong"
+    },
+    "callout": "Old, quiet M-dwarf — fewer flares, but tidal locking is still on the table."
+  },
+  {
+    "id": "kepler_452b",
+    "label": "🌍 Kepler-452 b",
+    "blurb": "Super-Earth in the HZ of an older, brighter sun-like star.",
+    "inputs": {
+      "star_name": "51 Pegasi",
+      "distance_AU": 1.05,
+      "mass_earth": 5.0,
+      "radius_earth": 1.5,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 60,
+      "moons": 1,
+      "magnetic_field": "strong"
+    },
+    "callout": "Heavy gravity (~1.6 g) + older star — Earth's cousin, but a tough hike."
+  },
+  {
+    "id": "hot_jupiter",
+    "label": "🪐 Hot Jupiter (51 Peg b analog)",
+    "blurb": "Gas giant cooked at 0.05 AU — molten silicate clouds.",
+    "inputs": {
+      "star_name": "51 Pegasi",
+      "distance_AU": 0.05,
+      "mass_earth": 150,
+      "radius_earth": 13,
+      "rotation_period_hours": 100,
+      "atmosphere_id": "hydrogen_helium",
+      "water_pct": 0,
+      "moons": 0,
+      "magnetic_field": "strong"
+    },
+    "callout": "First exoplanet ever found (1995). No surface. Glowing day side."
+  },
+  {
+    "id": "ocean_world",
+    "label": "🌊 Deep ocean world",
+    "blurb": "Earth-mass world with a 100-km-deep global ocean.",
+    "inputs": {
+      "star_name": "Tau Ceti",
+      "distance_AU": 0.7,
+      "mass_earth": 1.5,
+      "radius_earth": 1.2,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 100,
+      "moons": 1,
+      "magnetic_field": "strong"
+    },
+    "callout": "Could life evolve complex traits with no land at all?"
+  },
+  {
+    "id": "snowball_earth",
+    "label": "❄️ Snowball Earth",
+    "blurb": "Earth as a fully glaciated ice ball, ~700 Myr ago.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 1.0,
+      "mass_earth": 1.0,
+      "radius_earth": 1.0,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "ice_world",
+      "water_pct": 100,
+      "moons": 1,
+      "magnetic_field": "strong"
+    },
+    "callout": "Even at 1 AU, the right atmosphere can freeze you solid."
+  },
+  {
+    "id": "terraformed_mars",
+    "label": "🛠 Terraformed Mars",
+    "blurb": "Thicken the atmosphere, add a magnetic shield, warm it up.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 1.5,
+      "mass_earth": 0.107,
+      "radius_earth": 0.532,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 30,
+      "moons": 2,
+      "magnetic_field": "artificial_shield",
+      "terraforming_target": "warm_it_up"
+    },
+    "callout": "Even with the L1 shield, Mars's low gravity leaks atmosphere over Myr timescales."
+  },
+  {
+    "id": "seeded_titan",
+    "label": "🧬 Seeded Titan",
+    "blurb": "Drop extremophile microbes into Titan's methane lakes.",
+    "inputs": {
+      "star_name": "Sun",
+      "distance_AU": 9.5,
+      "mass_earth": 0.0225,
+      "radius_earth": 0.404,
+      "rotation_period_hours": 382,
+      "atmosphere_id": "titan_like",
+      "water_pct": 0,
+      "moons": 0,
+      "magnetic_field": "none",
+      "seeding_what": "extremophile_microbes",
+      "seeding_where": "ocean",
+      "seeding_horizon": "1M_yr"
+    },
+    "callout": "Earth's biochemistry would have to rewrite itself for a methane solvent."
+  },
+  {
+    "id": "kdwarf_paradise",
+    "label": "🟠 K-dwarf paradise",
+    "blurb": "Earth-twin around a quiet K-star — flare-quiet, billion-year stability.",
+    "inputs": {
+      "star_name": "Alpha Centauri B",
+      "distance_AU": 0.7,
+      "mass_earth": 1.0,
+      "radius_earth": 1.0,
+      "rotation_period_hours": 24,
+      "atmosphere_id": "earth_like",
+      "water_pct": 70,
+      "moons": 1,
+      "magnetic_field": "strong"
+    },
+    "callout": "Many astrobiologists think K-dwarf HZ planets are even better than Earth."
+  }
+]
