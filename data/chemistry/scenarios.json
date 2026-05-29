@@ -1,0 +1,111 @@
+[
+  {
+    "id": "h2_o2_boom",
+    "label": "💥 Hydrogen + Oxygen",
+    "blurb": "Two invisible gases ignite into a brilliant flash and pure water. The reaction that powered the Space Shuttle.",
+    "reagents": [
+      {"kind": "compound", "key": "H2", "qty": 2.0},
+      {"kind": "compound", "key": "O2", "qty": 1.0}
+    ],
+    "conditions": {"temperature_K": 600.0, "pressure_atm": 1.0, "catalyst": "electric spark", "mode": "realistic"},
+    "safety_callout": "Hydrogen-oxygen mixtures detonate over a wide range of ratios. Lab demo only."
+  },
+  {
+    "id": "mg_flash",
+    "label": "✨ Magnesium Flash",
+    "blurb": "A strip of dull grey metal ignites with a blinding white flame — the same trick used in old camera flashbulbs and modern flares.",
+    "reagents": [
+      {"kind": "element", "key": "Mg", "qty": 2.0},
+      {"kind": "compound", "key": "O2", "qty": 1.0}
+    ],
+    "conditions": {"temperature_K": 873.0, "pressure_atm": 1.0, "catalyst": "match flame", "mode": "realistic"},
+    "safety_callout": "Burns at ~3100 °C; the light can damage eyes. Never look directly at burning magnesium."
+  },
+  {
+    "id": "na_cl_salt",
+    "label": "🧂 Sodium + Chlorine → Salt",
+    "blurb": "A reactive metal meets a poisonous yellow-green gas and they violently combine into harmless table salt. Pure chemistry magic.",
+    "reagents": [
+      {"kind": "element", "key": "Na", "qty": 2.0},
+      {"kind": "element", "key": "Cl", "qty": 1.0}
+    ],
+    "conditions": {"temperature_K": 500.0, "pressure_atm": 1.0, "catalyst": "moisture or heat", "mode": "realistic"},
+    "safety_callout": "Pure chlorine gas is lethal; sodium ignites on contact with water. The product (NaCl) is the salt on your fries."
+  },
+  {
+    "id": "thermite",
+    "label": "🌋 Thermite",
+    "blurb": "Aluminum powder rips oxygen away from rust, releasing so much heat the iron melts and pours out white-hot.",
+    "reagents": [
+      {"kind": "compound", "key": "Fe2O3", "qty": 1.0},
+      {"kind": "element", "key": "Al", "qty": 2.0}
+    ],
+    "conditions": {"temperature_K": 1500.0, "pressure_atm": 1.0, "catalyst": "magnesium ribbon ignition", "mode": "realistic"},
+    "safety_callout": "Reaches ~2500 °C and cannot be extinguished by water. Industrial / demo use only."
+  },
+  {
+    "id": "h2o2_geyser",
+    "label": "🥤 Hydrogen Peroxide Geyser",
+    "blurb": "Concentrated hydrogen peroxide rips apart in seconds, blasting a tower of foam and steam — the kid-friendly 'elephant toothpaste' experiment.",
+    "reagents": [
+      {"kind": "compound", "key": "H2O2", "qty": 2.0}
+    ],
+    "conditions": {"temperature_K": 298.0, "pressure_atm": 1.0, "catalyst": "potassium iodide (KI)", "mode": "realistic"},
+    "safety_callout": "Concentrated H2O2 burns skin and clothing. School demos use lower-concentration peroxide with dish soap for foam."
+  },
+  {
+    "id": "acid_base_neutralize",
+    "label": "🌈 Acid meets Base",
+    "blurb": "A strong acid and a strong base cancel each other out, releasing heat. Add an indicator and it flips from pink to clear in an instant.",
+    "reagents": [
+      {"kind": "compound", "key": "HCl", "qty": 1.0},
+      {"kind": "compound", "key": "NaOH", "qty": 1.0}
+    ],
+    "conditions": {"temperature_K": 298.0, "pressure_atm": 1.0, "catalyst": "none (instant)", "mode": "realistic"},
+    "safety_callout": "Both starting materials are highly caustic; product is salty water. Always add acid to water, not the reverse."
+  },
+  {
+    "id": "limestone_fizz",
+    "label": "🪨 Limestone Fizz",
+    "blurb": "Drip strong acid onto limestone and the rock literally dissolves in a hissing cloud of CO2 — same reaction that carves caves.",
+    "reagents": [
+      {"kind": "compound", "key": "CaCO3", "qty": 1.0},
+      {"kind": "compound", "key": "HCl", "qty": 2.0}
+    ],
+    "conditions": {"temperature_K": 298.0, "pressure_atm": 1.0, "catalyst": "none (instant)", "mode": "realistic"},
+    "safety_callout": "HCl is corrosive. CO2 evolution can pressurize a sealed container."
+  },
+  {
+    "id": "methane_flame",
+    "label": "🔥 Methane Combustion",
+    "blurb": "The blue flame on a gas stove: methane plus oxygen burns to invisible CO2 and water vapor, with most of the energy carried away as heat.",
+    "reagents": [
+      {"kind": "compound", "key": "CH4", "qty": 1.0},
+      {"kind": "compound", "key": "O2", "qty": 2.0}
+    ],
+    "conditions": {"temperature_K": 1200.0, "pressure_atm": 1.0, "catalyst": "pilot light", "mode": "realistic"},
+    "safety_callout": "Incomplete combustion produces carbon monoxide. Always ensure good ventilation when burning methane."
+  },
+  {
+    "id": "ethanol_burn",
+    "label": "🍷 Ethanol Burn",
+    "blurb": "Pour rubbing alcohol onto a dish, light it, and watch a pale ghostly flame dance across the surface — clean combustion to CO2 and water.",
+    "reagents": [
+      {"kind": "compound", "key": "C2H5OH", "qty": 1.0},
+      {"kind": "compound", "key": "O2", "qty": 3.0}
+    ],
+    "conditions": {"temperature_K": 700.0, "pressure_atm": 1.0, "catalyst": "match flame", "mode": "realistic"},
+    "safety_callout": "Ethanol vapors are flammable. The blue flame is nearly invisible in daylight — a common burn hazard."
+  },
+  {
+    "id": "photosynthesis",
+    "label": "🌱 Photosynthesis",
+    "blurb": "Plants pull CO2 and water out of thin air and assemble them into sugar, powered entirely by sunlight. The reaction that built the biosphere.",
+    "reagents": [
+      {"kind": "compound", "key": "CO2", "qty": 6.0},
+      {"kind": "compound", "key": "H2O", "qty": 6.0}
+    ],
+    "conditions": {"temperature_K": 298.0, "pressure_atm": 1.0, "catalyst": "sunlight + chlorophyll", "mode": "realistic"},
+    "safety_callout": "Endothermic — needs continuous light energy input. Without sunlight nothing happens."
+  }
+]

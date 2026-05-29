@@ -15,6 +15,12 @@ from curious_mind.chemistry.mol_3d import (
 )
 from curious_mind.chemistry.periodic_table import render_picker, reset_picker_state
 from curious_mind.chemistry.schemas import ReactionResult
+from curious_mind.chemistry.atom_zoom import atom_zoom_height, atom_zoom_svg
+from curious_mind.chemistry.theater import (
+    heat_source_svg,
+    render_theater,
+    theater_height,
+)
 from curious_mind.chemistry.visuals import (
     energy_diagram_for,
     rate_vs_temperature_chart,
@@ -43,7 +49,32 @@ def _default_inputs() -> dict:
         "pressure_atm": 1.0,
         "catalyst": "spark",
         "mode": "realistic",
+        "challenge_mode": False,
     }
+
+
+def _apply_scenario(scenario: dict) -> None:
+    """Load a Mad Scientist preset into session_state and force a fresh run."""
+    sel: list[str] = []
+    qty: dict[str, float] = {}
+    for r in scenario.get("reagents", []):
+        key = f"{r['kind']}:{r['key']}"
+        sel.append(key)
+        qty[key] = float(r.get("qty", 1.0))
+    reset_picker_state(PICKER_KEY, sel, qty)
+    cond_src = scenario.get("conditions", {})
+    st.session_state.chem_conditions = {
+        "temperature_K": float(cond_src.get("temperature_K", 298.0)),
+        "pressure_atm":  float(cond_src.get("pressure_atm", 1.0)),
+        "catalyst":      str(cond_src.get("catalyst", "spark")),
+        "mode":          str(cond_src.get("mode", "realistic")),
+    }
+    st.session_state.pop("chem_last_result", None)
+    st.session_state.pop("chem_last_signature", None)
+    st.session_state.chem_active_scenario = scenario.get("id", "")
+    # Reset any challenge-mode state so the new reaction starts fresh.
+    st.session_state.pop("chem_challenge_revealed_sig", None)
+    st.session_state.pop("chem_challenge_prediction", None)
 
 
 # Seed picker state on first load only
@@ -62,6 +93,19 @@ if "chem_seeded" not in st.session_state:
 # Sidebar — conditions only (picker is in main pane so user has room)
 # ============================================================================
 with st.sidebar:
+    # -------- Mad Scientist preset menu ------------------------------------
+    with st.expander("🧙 Mad Scientist Picks", expanded=False):
+        st.caption("One-click curated experiments. Each loads reagents + conditions and runs.")
+        _scenarios = data_loader.load_scenarios()
+        for s in _scenarios:
+            if st.button(s["label"], key=f"scn_{s['id']}", use_container_width=True):
+                _apply_scenario(s)
+                st.toast(f"Loaded: {s['label']}")
+                st.rerun()
+            st.caption(s.get("blurb", ""))
+        if not _scenarios:
+            st.caption("_(No scenarios.json found.)_")
+
     st.markdown("### Conditions")
     cond = st.session_state.chem_conditions
     cond["temperature_K"] = float(
@@ -70,6 +114,12 @@ with st.sidebar:
             value=int(cond["temperature_K"]), step=10,
             help="From cryogenic (10 K) to plasma (10000 K).",
         )
+    )
+    # Live heat-source preview — updates instantly as the slider moves.
+    st.markdown(
+        f"<div style='display:flex;justify-content:center;margin:-4px 0 6px;'>"
+        f"{heat_source_svg(cond['temperature_K'], width=90, height=90)}</div>",
+        unsafe_allow_html=True,
     )
     cond["pressure_atm"] = float(
         st.select_slider(
@@ -91,11 +141,20 @@ with st.sidebar:
         help="Realistic sticks to documented chemistry. Speculative lets Claude reason about exotic combinations and labels its speculation.",
     )
 
+    # -------- Challenge mode toggle ----------------------------------------
+    st.session_state.setdefault("chem_challenge_mode", False)
+    st.session_state.chem_challenge_mode = st.toggle(
+        "🎯 Challenge mode",
+        value=st.session_state.chem_challenge_mode,
+        help="Hides the answer until you commit a prediction. Great for classroom 'guess first' moments.",
+    )
+
     st.divider()
 
     inputs_for_save = {
         "selected": st.session_state[f"{PICKER_KEY}_selected"],
         "quantities": st.session_state[f"{PICKER_KEY}_quantities"],
+        "challenge_mode": st.session_state.chem_challenge_mode,
         **cond,
     }
     loaded = render_persistence_sidebar(
@@ -113,6 +172,7 @@ with st.sidebar:
             "catalyst": merged["catalyst"],
             "mode": merged["mode"],
         }
+        st.session_state.chem_challenge_mode = bool(merged.get("challenge_mode", False))
         st.session_state.pop("chem_last_result", None)
         st.rerun()
 
@@ -207,30 +267,172 @@ ui.source_indicator(source)
 if result.confidence == "speculative":
     ui.speculation_banner()
 
-# ----- 1) Reaction flow visualization (the "what's happening" picture) -----
-st.subheader("Reaction overview")
+# ============================================================================
+# Challenge mode gate — predict-then-reveal
+# ============================================================================
+_RXN_TYPE_CHOICES = [
+    "synthesis", "decomposition", "single_replacement", "double_replacement",
+    "acid_base", "redox", "combustion", "no_reaction", "other",
+]
+
+
+def _exo_endo(enthalpy_class: str) -> str:
+    s = (enthalpy_class or "").lower()
+    if "exo" in s:
+        return "releases energy (exothermic)"
+    if "endo" in s:
+        return "absorbs energy (endothermic)"
+    return "roughly thermoneutral"
+
+
+def _normalize_phase(phase: str) -> str:
+    p = (phase or "").lower().strip()
+    for opt in ("solid", "liquid", "gas", "aqueous", "plasma"):
+        if opt in p:
+            return opt
+    return "gas"  # safe default for the predict form
+
+
+def _rxn_type_options(correct: str, seed: str) -> list[str]:
+    """4 stable-shuffled reaction-type options including the correct one."""
+    import random as _r
+    rng = _r.Random(hash(seed) & 0xFFFFFFFF)
+    pool = [t for t in _RXN_TYPE_CHOICES if t != correct]
+    rng.shuffle(pool)
+    picks = [correct] + pool[:3]
+    rng.shuffle(picks)
+    return picks
+
+
+if st.session_state.chem_challenge_mode:
+    _revealed = (
+        st.session_state.get("chem_challenge_revealed_sig") == input_signature
+    )
+    if not _revealed:
+        ui.info_panel(
+            "🎯 <b>Challenge mode:</b> commit your predictions before the answer is revealed."
+        )
+        with st.form("chem_challenge_form", clear_on_submit=False):
+            pred_energy = st.radio(
+                "Will this reaction release or absorb energy?",
+                options=["releases energy (exothermic)",
+                         "absorbs energy (endothermic)",
+                         "roughly thermoneutral"],
+                index=0,
+            )
+            pred_phase = st.radio(
+                "What phase will the main product be in at the given conditions?",
+                options=["solid", "liquid", "gas", "aqueous", "plasma"],
+                index=2, horizontal=True,
+            )
+            _rxn_options = _rxn_type_options(result.reaction_type, input_signature)
+            pred_type = st.radio(
+                "Which reaction type best describes what happens?",
+                options=[t.replace("_", " ").title() for t in _rxn_options],
+                index=0,
+            )
+            submit = st.form_submit_button("🔮 Reveal the answer", type="primary",
+                                           use_container_width=True)
+        if submit:
+            st.session_state.chem_challenge_prediction = {
+                "energy": pred_energy,
+                "phase": pred_phase,
+                "type": _rxn_options[
+                    [t.replace("_", " ").title() for t in _rxn_options].index(pred_type)
+                ],
+            }
+            st.session_state.chem_challenge_revealed_sig = input_signature
+            st.rerun()
+        st.stop()
+    else:
+        # Score chip
+        pred = st.session_state.get("chem_challenge_prediction") or {}
+        correct_energy = _exo_endo(result.enthalpy_class)
+        correct_phase = _normalize_phase(result.primary_product.phase)
+        correct_type = result.reaction_type
+        rows = [
+            ("Energy", pred.get("energy", ""), correct_energy),
+            ("Product phase", pred.get("phase", ""), correct_phase),
+            ("Reaction type",
+             pred.get("type", "").replace("_", " ").title(),
+             correct_type.replace("_", " ").title()),
+        ]
+        score = sum(1 for _, p, c in rows if p.strip().lower() == c.strip().lower())
+        st.markdown(
+            f"""<div style='background:linear-gradient(90deg,#10b981,#3b82f6);
+            padding:12px 16px;border-radius:10px;color:white;margin-bottom:12px;'>
+            <div style='font-size:1.3rem;font-weight:600;'>🎉 Score: {score} / 3</div>
+            <div style='font-size:0.9rem;opacity:0.9;'>
+            {"Perfect prediction!" if score == 3 else
+             "Great instincts — see the reveal below." if score >= 2 else
+             "Cool — let's see what really happens."}
+            </div></div>""",
+            unsafe_allow_html=True,
+        )
+        # Per-row table
+        for label, p, c in rows:
+            ok = p.strip().lower() == c.strip().lower()
+            mark = "✅" if ok else "❌"
+            st.markdown(
+                f"- {mark} <b>{label}</b> · you said <code>{p or '—'}</code> · "
+                f"answer: <code>{c}</code>",
+                unsafe_allow_html=True,
+            )
+
+# ----- 1) Reaction Theater — the hero animated scene -----------------------
+_theater_header_left, _theater_header_right = st.columns([3, 2])
+with _theater_header_left:
+    st.subheader("🎬 Reaction Theater")
+with _theater_header_right:
+    _zoom_on = st.toggle(
+        "🔬 Zoom into atoms",
+        value=st.session_state.get("chem_atom_zoom", False),
+        key="chem_atom_zoom",
+        help="Switch from the vessels view to an atom-level conservation scene.",
+    )
+
 reactant_records = [
     {"kind": k.split(":", 1)[0], "ident": k.split(":", 1)[1], "qty": quantities.get(k)}
     for k in selected_keys
 ]
-st.markdown(
-    reaction_flow_html(
+if _zoom_on:
+    components.html(
+        atom_zoom_svg(result.balanced_equation),
+        height=atom_zoom_height(),
+    )
+else:
+    _theater_html = render_theater(
         reactants=reactant_records,
-        primary_product={
-            "formula": result.primary_product.formula,
-            "name": result.primary_product.name,
-            "phase": result.primary_product.phase,
-        },
-        byproducts=[
-            {"formula": bp.formula, "name": bp.name, "phase": bp.phase}
-            for bp in result.byproducts
-        ],
-        enthalpy_kJ_per_mol=result.enthalpy_kJ_per_mol,
-        enthalpy_class=result.enthalpy_class,
-        catalyst=inputs["catalyst"],
-    ),
-    unsafe_allow_html=True,
-)
+        product_phase=result.primary_product.phase,
+        product_label=result.primary_product.formula or "?",
+        byproduct_labels=[bp.formula for bp in result.byproducts if bp.formula],
+        reactant_colors=result.reactant_colors,
+        product_colors=result.product_colors,
+        visual_effects=result.visual_effects,
+        dramatic_moment=result.dramatic_moment,
+        temperature_K=st.session_state.chem_conditions["temperature_K"],
+    )
+    components.html(_theater_html, height=theater_height())
+
+with st.expander("📋 Reaction summary card", expanded=False):
+    st.markdown(
+        reaction_flow_html(
+            reactants=reactant_records,
+            primary_product={
+                "formula": result.primary_product.formula,
+                "name": result.primary_product.name,
+                "phase": result.primary_product.phase,
+            },
+            byproducts=[
+                {"formula": bp.formula, "name": bp.name, "phase": bp.phase}
+                for bp in result.byproducts
+            ],
+            enthalpy_kJ_per_mol=result.enthalpy_kJ_per_mol,
+            enthalpy_class=result.enthalpy_class,
+            catalyst=inputs["catalyst"],
+        ),
+        unsafe_allow_html=True,
+    )
 
 # ----- 2) Balanced equation + headline metrics ----------------------------
 left, right = st.columns([3, 2])
@@ -363,6 +565,36 @@ if result.safety_notes:
     st.subheader("Safety & honesty")
     for note in result.safety_notes:
         ui.warn_panel(f"⚠️ {note}")
+
+# ----- 4b) Quiz me panel --------------------------------------------------
+if result.quiz:
+    with st.expander("🧠 Quiz me on this reaction", expanded=False):
+        st.caption("Pick an answer, then click *Reveal* to check yourself.")
+        for qi, q in enumerate(result.quiz):
+            st.markdown(f"**Q{qi + 1}. {q.question}**")
+            ans_key = f"chem_quiz_{input_signature[:12]}_{qi}_ans"
+            rev_key = f"chem_quiz_{input_signature[:12]}_{qi}_rev"
+            choice = st.radio(
+                "Your answer:",
+                options=q.choices,
+                key=ans_key,
+                label_visibility="collapsed",
+                index=None,
+            )
+            cols = st.columns([1, 5])
+            with cols[0]:
+                if st.button("Reveal", key=f"btn_{rev_key}"):
+                    st.session_state[rev_key] = True
+            if st.session_state.get(rev_key):
+                correct = q.choices[q.correct_index]
+                if choice == correct:
+                    st.success(f"✅ Correct — {q.explanation}")
+                else:
+                    st.error(
+                        f"❌ Answer: **{correct}**" +
+                        (f" — {q.explanation}" if q.explanation else "")
+                    )
+            st.markdown("---")
 
 # ----- 5) 3D atomic structure (Bohr model) --------------------------------
 _selected_elements = [

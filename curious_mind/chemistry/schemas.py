@@ -84,6 +84,47 @@ _REACTION_TYPE_SYNONYMS = {
     "unknown": "other",
 }
 
+_VISUAL_EFFECTS = {
+    "bubbles",         # gas evolution
+    "precipitate",     # solid falling out of solution
+    "flash",           # bright burst
+    "color_change",    # solution/mixture changes color
+    "smoke",           # plume rising
+    "explosion",       # violent expansion
+    "glow",            # sustained luminescence
+    "crystal_growth",  # crystals forming
+    "flame",           # combustion / sustained burning
+    "fizz",            # vigorous bubbling
+    "melt",            # solid → liquid
+    "freeze",          # liquid → solid
+    "vapor",           # liquid → gas plume
+    "spark",           # short bright sparks
+}
+_VISUAL_EFFECT_SYNONYMS = {
+    "gas": "bubbles",
+    "bubble": "bubbles",
+    "effervescence": "fizz",
+    "boiling": "vapor",
+    "steam": "vapor",
+    "burn": "flame",
+    "combustion": "flame",
+    "fire": "flame",
+    "light": "glow",
+    "luminescence": "glow",
+    "sparks": "spark",
+    "burst": "flash",
+    "boom": "explosion",
+    "puff": "smoke",
+    "fog": "smoke",
+    "precipitation": "precipitate",
+    "crystals": "crystal_growth",
+    "crystallize": "crystal_growth",
+    "color": "color_change",
+    "colour_change": "color_change",
+    "discoloration": "color_change",
+}
+
+
 _CONFIDENCE_CLASSES = {"well_documented", "probable", "speculative"}
 _CONFIDENCE_SYNONYMS = {
     "well-documented": "well_documented",
@@ -117,6 +158,40 @@ def _normalize_enum(v: Any, valid: set[str], synonyms: dict[str, str], default: 
     return default
 
 
+class QuizItem(BaseModel):
+    """A single multiple-choice question Claude generates about the reaction."""
+
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+
+    question: str
+    choices: list[str] = Field(default_factory=list)
+    correct_index: int = 0
+    explanation: str = ""
+
+    @field_validator("choices", mode="before")
+    @classmethod
+    def _coerce_choices(cls, v: Any) -> list[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            v = [v]
+        out = [str(c).strip() for c in v if str(c).strip()]
+        return out[:4]  # cap at 4 options
+
+    @field_validator("correct_index", mode="before")
+    @classmethod
+    def _coerce_idx(cls, v: Any) -> int:
+        try:
+            return max(0, int(v))
+        except (TypeError, ValueError):
+            return 0
+
+    @field_validator("question", "explanation", mode="before")
+    @classmethod
+    def _coerce_str(cls, v: Any) -> str:
+        return "" if v is None else str(v)
+
+
 class ReactionResult(BaseModel):
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
@@ -142,6 +217,17 @@ class ReactionResult(BaseModel):
     confidence: str = "probable"
     safety_notes: list[str] = Field(default_factory=list)
     follow_ups: list[str] = Field(default_factory=list)
+
+    # ---- Spectacle hints (Phase 1 Reaction Theater) ----------------------
+    # All optional with sane defaults; older cached results and minimal
+    # fallbacks keep working unchanged.
+    visual_effects: list[str] = Field(default_factory=list)
+    reactant_colors: list[str] = Field(default_factory=list)
+    product_colors: list[str] = Field(default_factory=list)
+    dramatic_moment: str = ""
+
+    # ---- Quiz items (Phase 2 Challenge mode) -----------------------------
+    quiz: list[QuizItem] = Field(default_factory=list)
 
     # ---- Normalizers -----------------------------------------------------
     @field_validator("enthalpy_kJ_per_mol", "activation_energy_kJ_per_mol", mode="before")
@@ -169,7 +255,14 @@ class ReactionResult(BaseModel):
     def _norm_confidence(cls, v: Any) -> str:
         return _normalize_enum(v, _CONFIDENCE_CLASSES, _CONFIDENCE_SYNONYMS, "probable")
 
-    @field_validator("byproducts", "safety_notes", "follow_ups", mode="before")
+    @field_validator(
+        "byproducts",
+        "safety_notes",
+        "follow_ups",
+        "reactant_colors",
+        "product_colors",
+        mode="before",
+    )
     @classmethod
     def _coerce_list(cls, v: Any) -> list:
         if v is None:
@@ -184,12 +277,65 @@ class ReactionResult(BaseModel):
     def _cap_followups(cls, v: list[str]) -> list[str]:
         return [str(s) for s in v[:3] if s]
 
+    @field_validator("visual_effects", mode="before")
+    @classmethod
+    def _norm_visual_effects(cls, v: Any) -> list[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            v = [v]
+        out: list[str] = []
+        seen: set[str] = set()
+        for item in v:
+            s = str(item).strip().lower().replace(" ", "_").replace("-", "_")
+            if not s:
+                continue
+            s = _VISUAL_EFFECT_SYNONYMS.get(s, s)
+            if s in _VISUAL_EFFECTS and s not in seen:
+                out.append(s)
+                seen.add(s)
+            if len(out) >= 4:
+                break
+        return out
+
+    @field_validator("quiz", mode="before")
+    @classmethod
+    def _coerce_quiz(cls, v: Any) -> list:
+        if v is None:
+            return []
+        if isinstance(v, dict):
+            v = [v]
+        # Generous raw cap (5) so we can still pick 2 good items after filtering.
+        return list(v)[:5]
+
+    @field_validator("quiz")
+    @classmethod
+    def _drop_bad_quiz(cls, v: list) -> list:
+        # Drop items with <2 choices or out-of-range correct_index, then cap at 2.
+        out: list = []
+        for q in v:
+            if len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
+                out.append(q)
+        return out[:2]
+
+    @field_validator("reactant_colors", "product_colors")
+    @classmethod
+    def _clean_colors(cls, v: list[str]) -> list[str]:
+        # Cap at 4; strip; keep CSS-safe-ish strings only.
+        out: list[str] = []
+        for c in v[:4]:
+            s = str(c).strip()
+            if s:
+                out.append(s)
+        return out
+
     @field_validator(
         "balanced_equation",
         "phase_at_conditions",
         "mechanism",
         "real_world_connection",
         "equilibrium_notes",
+        "dramatic_moment",
         mode="before",
     )
     @classmethod

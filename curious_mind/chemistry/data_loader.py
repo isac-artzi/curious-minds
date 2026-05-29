@@ -24,6 +24,22 @@ def load_reactions() -> list[dict]:
     return json.loads((DATA_DIR / "reactions.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def load_scenarios() -> list[dict]:
+    """Mad Scientist preset experiments — see data/chemistry/scenarios.json."""
+    path = DATA_DIR / "scenarios.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def scenario_by_id(scenario_id: str) -> dict | None:
+    for s in load_scenarios():
+        if s.get("id") == scenario_id:
+            return s
+    return None
+
+
 def element_by_symbol(symbol: str) -> dict | None:
     for e in load_elements():
         if e["symbol"] == symbol:

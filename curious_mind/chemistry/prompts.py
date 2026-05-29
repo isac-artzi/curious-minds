@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .schemas import Product, ReactionResult
+from .schemas import Product, QuizItem, ReactionResult
 
 SYSTEM_PROMPT = """You are a chemistry educator who reasons over a curated knowledge base of
 elements and compounds. You explain at the level of a curious high-school student.
@@ -59,9 +59,44 @@ SCHEMA FIELDS (be especially careful with the new ones):
   goes to completion, or sits at equilibrium under the given conditions.
   Mention Le Chatelier shifts if T or P changes would matter.
 
+VISUAL CUES (these drive an on-screen "Reaction Theater" animation —
+do your best, defaults are fine):
+- visual_effects: 0 to 4 keywords describing what a curious teenager
+  would SEE. Choose only from this controlled vocabulary:
+    bubbles, precipitate, flash, color_change, smoke, explosion, glow,
+    crystal_growth, flame, fizz, melt, freeze, vapor, spark.
+  Pick the ones that genuinely apply (e.g. flame+vapor for hydrocarbon
+  combustion in air; flash+crystal_growth for Na+Cl2 → NaCl; bubbles+
+  color_change for an acid+carbonate reaction). Return [] if nothing
+  dramatic is visible (e.g. inert noble gas, no_reaction).
+- reactant_colors / product_colors: short list of CSS-safe color names
+  or hex strings ("steelblue", "#A8D8B9", "yellow-green", "silver",
+  "colorless") describing what each reactant / product LOOKS like in
+  its phase at the conditions. One entry per reactant or product, in
+  the same order. For "colorless" gases or liquids use "colorless".
+- dramatic_moment: ONE vivid sentence (≤ 25 words) describing the most
+  visually striking instant of the reaction, suitable for a teen
+  audience. Examples: "A blinding white flame erupts as magnesium
+  ribbon ignites in the oxygen-rich air." or "Pale yellow chlorine gas
+  swallows the sodium and a brilliant orange flash leaves behind a
+  small mound of white salt." Leave "" if nothing dramatic happens.
+
+QUIZ (Challenge mode):
+- quiz: 1 or 2 multiple-choice questions tied SPECIFICALLY to THIS
+  reaction (not generic chemistry trivia). Each entry has:
+    question: one clear question, ≤ 25 words.
+    choices: 3 or 4 short answer options.
+    correct_index: zero-based index of the correct choice.
+    explanation: ONE sentence (≤ 20 words) explaining why the answer is
+      correct, suitable for a middle/high-school student.
+  Good question types: predict the dominant product, identify the
+  reaction type, predict whether ΔH is + or -, identify what the
+  catalyst's role is, predict what shifts the equilibrium. Avoid
+  questions that the on-screen visuals already answer outright.
+
 LENGTH BUDGET: keep mechanism to 3-5 sentences, real_world_connection to
-2-3 sentences, equilibrium_notes to 1-2 sentences. The whole JSON should
-fit comfortably in 1500 tokens.
+2-3 sentences, equilibrium_notes to 1-2 sentences, dramatic_moment to
+ONE sentence. Whole JSON should fit comfortably in 1800 tokens.
 """
 
 
@@ -103,5 +138,31 @@ FALLBACK_REACTION = ReactionResult(
         "What happens if you replace H with deuterium (D)?",
         "What if you raise the temperature to 1000 K with no catalyst?",
         "How does this compare to the energy released by burning methane?",
+    ],
+    visual_effects=["flash", "flame", "vapor"],
+    reactant_colors=["colorless", "colorless"],
+    product_colors=["colorless"],
+    dramatic_moment=(
+        "A pale-blue flame leaps from the spark and the gas mixture briefly "
+        "flashes white as steam billows out."
+    ),
+    quiz=[
+        QuizItem(
+            question="Why doesn't H2 and O2 react at room temperature without a spark?",
+            choices=[
+                "The reaction is endothermic.",
+                "There's a high activation-energy barrier even though the reaction is exothermic.",
+                "Water vapor blocks the reaction.",
+                "Oxygen is too stable to react.",
+            ],
+            correct_index=1,
+            explanation="The Ea barrier (~175 kJ/mol) needs an initiator like a spark.",
+        ),
+        QuizItem(
+            question="What phase is the water product at 25 °C and 1 atm?",
+            choices=["Solid", "Liquid", "Gas", "Plasma"],
+            correct_index=1,
+            explanation="Liquid: 25 °C is between water's melting (0 °C) and boiling (100 °C) points.",
+        ),
     ],
 )
