@@ -1,0 +1,15 @@
+{
+  "schema": "curious-minds.experiment",
+  "version": "1.0",
+  "app": "physics",
+  "created_at": "2026-08-30T00:00:00Z",
+  "title": "Red light paradox (photoelectric)",
+  "inputs": {
+    "scenario": "photoelectric",
+    "pe_metal": "sodium",
+    "pe_freq_hz": 4.3e14,
+    "pe_intensity_rel": 5.0,
+    "challenge_mode": true
+  },
+  "notes": "Bright red light on sodium ejects zero electrons, no matter the intensity — the observation classical physics couldn't explain and Einstein's photon model could. Slide the frequency up past the threshold to see electrons appear."
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "curious-minds.experiment",
+  "version": "1.0",
+  "app": "physics",
+  "created_at": "2026-08-30T00:00:00Z",
+  "title": "Will the coaster make the hill?",
+  "inputs": {
+    "scenario": "rollercoaster",
+    "rc_h0": 30.0,
+    "rc_h1": 12.0,
+    "rc_h2": 28.0,
+    "rc_mu_k": 0.05,
+    "rc_mass": 100.0,
+    "challenge_mode": true
+  },
+  "notes": "The second hill is only 2 m lower than the start — with friction eating energy the whole way, does the cart clear it? Great 'predict first' moment before revealing the energy bar chart."
+}
