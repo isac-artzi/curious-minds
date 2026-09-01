@@ -231,13 +231,13 @@ class EcosystemResult(BaseModel):
             return []
         if isinstance(v, dict):
             v = [v]
-        return list(v)[:5]  # generous cap before filtering
+        return [q for q in list(v) if isinstance(q, dict)][:5]  # generous cap before filtering
 
     @field_validator("quiz")
     @classmethod
     def _drop_bad_quiz(cls, v):
         out = []
         for q in v:
-            if len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
+            if q.question and len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
                 out.append(q)
         return out[:2]

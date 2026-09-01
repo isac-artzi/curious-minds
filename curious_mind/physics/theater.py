@@ -152,19 +152,27 @@ def render_incline_theater(
     # Block orientation along ramp
     rot = -angle_deg
 
-    # Animation: slide from top to bottom of ramp if moving
-    sliding = verdict in ("kinetic", "sliding", "moving") or accel > 0.05
+    # Animation: slide along the ramp if the simulator says the block moves.
+    # The simulator's verdicts are "static", "accelerating_up",
+    # "accelerating_down" (accel sign: + = up-slope, − = down-slope).
+    sliding = verdict.startswith("accelerating") or abs(accel) > 0.05
     # Duration: ~ sqrt(2L/a) with a floor
-    if sliding and accel > 0:
-        slide_t = max(0.8, min(4.0, math.sqrt(2 * ramp_w / max(accel * 30, 1)) ))
+    if sliding:
+        slide_t = max(0.8, min(4.0, math.sqrt(2 * ramp_w / max(abs(accel) * 30, 1))))
     else:
         slide_t = 0.0
 
     anim_class = "sliding" if sliding else "static"
-    # Precompute pixel deltas along the slope (CSS has no tan()).
+    # Precompute pixel deltas along the slope (CSS has no tan()). The ramp
+    # surface rises left→right, and the block starts near the top, so
+    # down-slope motion is (−x, +y) on screen and up-slope is (+x, −y).
+    going_up = verdict == "accelerating_up" or (
+        not verdict.startswith("accelerating") and accel > 0
+    )
+    sign = 1.0 if going_up else -1.0
     slide_dist = ramp_w * 0.55
-    slide_dx = slide_dist * math.cos(math.radians(angle_deg))
-    slide_dy = slide_dist * math.sin(math.radians(angle_deg))
+    slide_dx = sign * slide_dist * math.cos(math.radians(angle_deg))
+    slide_dy = -sign * slide_dist * math.sin(math.radians(angle_deg))
     anim_style = (
         f'animation: phy-slide {slide_t:.2f}s ease-in infinite;'
         f' --sdx:{slide_dx:.1f}px; --sdy:{slide_dy:.1f}px;'
@@ -174,6 +182,8 @@ def render_incline_theater(
     arrow_color = "#22c55e" if verdict == "static" else "#f97316"
     verdict_label = {
         "static": "🟢 STATIC — friction holds",
+        "accelerating_down": "🟠 SLIDING DOWN — gravity beats friction",
+        "accelerating_up": "🟣 PUSHED UP the slope",
         "kinetic": "🟠 SLIDING — kinetic friction",
         "sliding": "🟠 SLIDING — kinetic friction",
         "applied": "🟣 PUSHED",
@@ -411,8 +421,8 @@ def render_spring_theater(
   <!-- wall -->
   <rect x="0" y="{base_y - 60}" width="{wall_x}" height="90" fill="#374151"/>
   {''.join(f'<line x1="0" y1="{base_y - 60 + i*8}" x2="{wall_x}" y2="{base_y - 52 + i*8}" stroke="#1f2937" stroke-width="1"/>' for i in range(11))}
-  <!-- spring group (scales horizontally with block) -->
-  <g class="phy-spring-group" style="--rest:{rest_x:.1f}px; --amp:{amp_px:.1f}px; --period:{period:.2f}s; transform-origin: {wall_x}px {base_y - 20}px;">
+  <!-- spring group (scales horizontally so the coil end tracks the block) -->
+  <g class="phy-spring-group" style="--smin:{(rest_x - amp_px - 25 - wall_x) / 120.0:.4f}; --smax:{(rest_x + amp_px - 25 - wall_x) / 120.0:.4f}; --period:{period:.2f}s; transform-origin: {wall_x}px {base_y - 20}px;">
     <polyline points="{wall_x},{base_y - 20} {wall_x+12},{base_y - 30} {wall_x+24},{base_y - 10} {wall_x+36},{base_y - 30} {wall_x+48},{base_y - 10} {wall_x+60},{base_y - 30} {wall_x+72},{base_y - 10} {wall_x+84},{base_y - 30} {wall_x+96},{base_y - 10} {wall_x+108},{base_y - 30} {wall_x+120},{base_y - 20}"
               stroke="#cbd5e1" stroke-width="2.5" fill="none"/>
   </g>
@@ -447,12 +457,12 @@ def _freq_to_color(f_Hz: float) -> str:
         return "#a78bfa"  # UV / violet
     # Map visible band to wavelength (nm) then to RGB
     wl_nm = 3.0e17 / f_Hz  # c/f in nm
-    # Crude piecewise color map
-    if wl_nm >= 645: return "#ff2d2d"
-    if wl_nm >= 580: return "#ff8c00"
-    if wl_nm >= 510: return "#ffd400"
-    if wl_nm >= 490: return "#00d26a"
-    if wl_nm >= 440: return "#1e88e5"
+    # Crude piecewise color map (standard band edges: green ≈ 495–570 nm)
+    if wl_nm >= 620: return "#ff2d2d"
+    if wl_nm >= 590: return "#ff8c00"
+    if wl_nm >= 570: return "#ffd400"
+    if wl_nm >= 495: return "#00d26a"
+    if wl_nm >= 450: return "#1e88e5"
     return "#8a4dff"
 
 
@@ -555,7 +565,6 @@ def render_de_broglie_theater(
     log_wl = math.log10(max(wl, 1e-40))
     # Compress log-range: 1e-9 (-9) → 60 px; 1e-34 (-34) → 6 px. Linear in log.
     period_px = max(6.0, min(160.0, 6.0 + (log_wl + 34) * 2.16))
-    n_waves = int(max(2, min(40, (sw - 80) / period_px)))
     # Build wave path: sine with that period
     points = []
     amp = 20
@@ -737,9 +746,11 @@ _THEATER_CSS = """
   animation: phy-osc var(--period, 1s) ease-in-out infinite;
 }
 @keyframes phy-spring-stretch {
-  0%   { transform: scaleX(0.7); }
-  50%  { transform: scaleX(1.3); }
-  100% { transform: scaleX(0.7); }
+  /* --smin/--smax are computed per-render so the coil's free end lands
+     exactly on the block's left edge at both extremes of the oscillation. */
+  0%   { transform: scaleX(var(--smin, 0.7)); }
+  50%  { transform: scaleX(var(--smax, 1.3)); }
+  100% { transform: scaleX(var(--smin, 0.7)); }
 }
 .phy-spring-group {
   animation: phy-spring-stretch var(--period, 1s) ease-in-out infinite;

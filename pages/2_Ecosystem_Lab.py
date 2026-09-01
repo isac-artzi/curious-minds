@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html as _html
+
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -38,7 +40,7 @@ if not llm.have_api_key():
     ui.offline_banner()
 
 
-HORIZON_OPTIONS = [1, 5, 25, 50, 100]
+HORIZON_OPTIONS = [1, 5, 20, 25, 30, 50, 100]
 
 
 def _default_inputs() -> dict:
@@ -105,6 +107,7 @@ species_lookup = {s["id"]: s for s in species_all}
 def _default_pop_for(species: dict) -> int:
     """Sensible starting population by trophic level."""
     return {
+        "decomposer": 400,
         "producer": 600,
         "primary_consumer": 300,
         "secondary_consumer": 60,
@@ -118,7 +121,7 @@ with st.sidebar:
         st.caption("One-click curated biomes + species + disturbance.")
         _scenarios = data_loader.load_scenarios()
         for s in _scenarios:
-            if st.button(s["label"], key=f"eco_scn_{s['id']}", use_container_width=True):
+            if st.button(s["label"], key=f"eco_scn_{s['id']}", width="stretch"):
                 _apply_eco_scenario(s)
                 st.toast(f"Loaded: {s['label']}")
                 st.rerun()
@@ -177,6 +180,7 @@ with st.sidebar:
         ("secondary_consumer", "🦊 Carnivores"),
         ("primary_consumer", "🦌 Herbivores"),
         ("producer", "🌱 Producers"),
+        ("decomposer", "🍄 Decomposers"),
     ]
     species_by_level: dict[str, list[dict]] = {k: [] for k, _ in _TROPHIC_ORDER}
     for s in species_all:
@@ -330,7 +334,7 @@ with st.sidebar:
         st.session_state.pop("eco_challenge_prediction", None)
         st.rerun()
 
-    run_btn = st.button("🌱 Run scenario", type="primary", use_container_width=True)
+    run_btn = st.button("🌱 Run scenario", type="primary", width="stretch")
 
 # ---- main ------------------------------------------------------------
 inputs = st.session_state.eco_inputs
@@ -405,7 +409,33 @@ payload = {
     # and show the same answer again).
     "user_question": st.session_state.get("eco_user_question"),
 }
+# Drop a stale follow-up question as soon as any other input changes.
+_base_signature = _json.dumps(
+    {k: v for k, v in payload.items() if k != "user_question"},
+    sort_keys=True, default=str,
+)
+if st.session_state.get("eco_base_signature") not in (None, _base_signature):
+    st.session_state.pop("eco_user_question", None)
+    payload["user_question"] = None
+st.session_state["eco_base_signature"] = _base_signature
+
 input_signature = _json.dumps(payload, sort_keys=True, default=str)
+# Short unique id for widget keys: the first characters of the raw
+# signature are identical across runs, so hash the whole thing.
+import hashlib as _hashlib
+_sig_hash = _hashlib.md5(input_signature.encode()).hexdigest()[:12]
+
+# The Showcase-preset callout describes a specific curated setup; once the
+# user edits any input away from it, retire the banner.
+if st.session_state.get("eco_active_scenario_preset"):
+    _preset_sig = st.session_state.get("eco_active_preset_sig")
+    if _preset_sig is None:
+        st.session_state["eco_active_preset_sig"] = input_signature
+    elif _preset_sig != input_signature:
+        st.session_state.pop("eco_active_scenario_preset", None)
+        st.session_state.pop("eco_active_preset_callout", None)
+        st.session_state.pop("eco_active_preset_sig", None)
+
 should_run = (
     run_btn
     or "eco_last_result" not in st.session_state
@@ -524,12 +554,12 @@ if st.session_state.eco_challenge_mode:
                     options=list(range(len(q["options"]))),
                     format_func=lambda i, opts=q["options"]: opts[i],
                     index=0,
-                    key=f"eco_pred_{qi}",
+                    key=f"eco_pred_{_sig_hash}_{qi}",
                 )
                 picks.append(int(choice))
             submit_pred = st.form_submit_button(
                 "🔮 Reveal the answer", type="primary",
-                use_container_width=True,
+                width="stretch",
             )
         if submit_pred:
             st.session_state.eco_challenge_prediction = picks
@@ -601,7 +631,7 @@ with left:
             species_records,
             data_loader.load_interactions(),
         ),
-        use_container_width=True,
+        width="stretch",
     )
 
 with right:
@@ -623,7 +653,7 @@ with right:
             hunt=inputs["hunt"],
             precomputed=(sim_t, sim_pops),
         ),
-        use_container_width=True,
+        width="stretch",
     )
     with st.expander("ℹ️ How is this computed?"):
         st.markdown(
@@ -652,12 +682,12 @@ m1, m2 = st.columns([2, 1])
 with m1:
     st.plotly_chart(
         trophic_pyramid_figure(species_records, final_pops),
-        use_container_width=True,
+        width="stretch",
     )
 with m2:
     st.plotly_chart(
         shannon_diversity_figure(final_pops),
-        use_container_width=True,
+        width="stretch",
     )
     st.caption(
         "Shannon **H′** combines species count and evenness. "
@@ -681,7 +711,7 @@ if abs(inputs["climate_dT_C"]) > 0.01 or abs(inputs["climate_dP_pct"]) > 0.01:
             disturbance_year=inputs["disturbance_year"],
             protect=inputs["protect"], hunt=inputs["hunt"],
         ),
-        use_container_width=True,
+        width="stretch",
     )
 
 st.subheader(
@@ -752,7 +782,7 @@ if result.keystone_species:
             protect=inputs["protect"], hunt=inputs["hunt"],
         )
         if ki_fig is not None:
-            st.plotly_chart(ki_fig, use_container_width=True)
+            st.plotly_chart(ki_fig, width="stretch")
 
 if result.cascade:
     st.subheader(
@@ -786,7 +816,7 @@ if result.real_world_analogue:
         help="A documented case from real ecology that most resembles this scenario "
              "— a sanity anchor so abstract dynamics map onto something concrete.",
     )
-    ui.info_panel(result.real_world_analogue)
+    ui.info_panel(_html.escape(result.real_world_analogue))
 
 if result.conservation_note:
     st.subheader(
@@ -813,8 +843,8 @@ if result.quiz:
         st.caption("Pick an answer, then click *Reveal* to check yourself.")
         for qi, q in enumerate(result.quiz):
             st.markdown(f"**Q{qi + 1}. {q.question}**")
-            ans_key = f"eco_quiz_{input_signature[:12]}_{qi}_ans"
-            rev_key = f"eco_quiz_{input_signature[:12]}_{qi}_rev"
+            ans_key = f"eco_quiz_{_sig_hash}_{qi}_ans"
+            rev_key = f"eco_quiz_{_sig_hash}_{qi}_rev"
             choice = st.radio(
                 "Your answer:",
                 options=q.choices,

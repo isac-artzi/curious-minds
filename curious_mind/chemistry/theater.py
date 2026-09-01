@@ -15,6 +15,8 @@ Public surface:
 
 from __future__ import annotations
 
+import re
+
 from . import data_loader
 
 
@@ -39,6 +41,10 @@ def _phase_at(item: dict, temperature_K: float) -> str:
     if mp is None or bp is None:
         return str(item.get("phase_at_stp") or "unknown")
     T = float(temperature_K)
+    if float(mp) >= float(bp):
+        # Sublimer at 1 atm (e.g. CO₂: triple point above the sublimation
+        # point) — no liquid phase exists at ambient pressure.
+        return "solid" if T < float(bp) else "gas"
     if T < float(mp):
         return "solid"
     if T < float(bp):
@@ -60,7 +66,13 @@ def _safe_color(c: str | None, phase: str) -> str:
         if phase == "liquid":
             return "rgba(180,200,230,0.55)"
         return "#cfd4dc"
-    return s
+    # Only allow strings that look like a CSS color token (named color, hex,
+    # or rgb()/hsl() call). Anything else — multi-word names Claude invents,
+    # or stray markup — falls back to the phase default instead of silently
+    # rendering transparent (or injecting into the inline style).
+    if re.fullmatch(r"#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgb|rgba|hsl|hsla)\([0-9,.%\s]*\)", s):
+        return s
+    return _PHASE_DEFAULT_COLOR.get(phase, _PHASE_DEFAULT_COLOR["unknown"])
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +82,7 @@ def _safe_color(c: str | None, phase: str) -> str:
 def heat_source_svg(temperature_K: float, *, width: int = 120, height: int = 120) -> str:
     """Animated SVG whose appearance reflects the current temperature regime."""
     T = float(temperature_K)
-    if T < 200:
+    if T < 273:
         return f"""
 <svg viewBox="0 0 100 100" width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">
   <defs><radialGradient id="ib" cx="50%" cy="60%" r="55%">

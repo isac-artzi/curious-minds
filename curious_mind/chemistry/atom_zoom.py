@@ -28,6 +28,8 @@ _ATOM_RE = re.compile(r"([A-Z][a-z]?)(\d*)")
 def _strip_latex(s: str) -> str:
     """Reduce a LaTeX-ish equation to plain ASCII suitable for parsing."""
     s = s.replace(r"\rightarrow", "→").replace(r"\to", "→")
+    # Tolerate plain-text arrows the model sometimes emits instead of LaTeX.
+    s = s.replace("-->", "→").replace("->", "→").replace("⟶", "→").replace("=", "→")
     s = s.replace(r"\;", " ").replace(r"\,", " ").replace("$", "")
     # H_2 or H_{2} → H2
     s = re.sub(r"_\{?(\d+)\}?", r"\1", s)
@@ -36,8 +38,23 @@ def _strip_latex(s: str) -> str:
     return s.strip()
 
 
+def _expand_groups(f: str) -> str:
+    """Expand parenthesized groups: ``Ca(OH)2`` → ``CaOHOH``.
+
+    Handles nesting by expanding innermost groups first.
+    """
+    group_re = re.compile(r"\(([^()]*)\)(\d*)")
+    while "(" in f:
+        new = group_re.sub(lambda m: m.group(1) * int(m.group(2) or 1), f)
+        if new == f:  # unbalanced parens — give up gracefully
+            return f.replace("(", "").replace(")", "")
+        f = new
+    return f
+
+
 def parse_formula(formula: str) -> dict[str, int]:
-    """Element symbol → atom count for a simple formula (no parens / hydrates).
+    """Element symbol → atom count for a formula, including parenthesized
+    groups like ``Ca(OH)2`` and ``Al2(SO4)3``.
 
     Handles SMILES-style ionic strings like ``[Na+].[Cl-]`` by stripping
     brackets and dots. Subscripts use the trailing-number convention
@@ -46,6 +63,7 @@ def parse_formula(formula: str) -> dict[str, int]:
     if not formula:
         return {}
     f = re.sub(r"[\[\]+\-.\s]", "", formula)
+    f = _expand_groups(f)
     out: dict[str, int] = {}
     for match in _ATOM_RE.finditer(f):
         sym, cnt = match.group(1), match.group(2)

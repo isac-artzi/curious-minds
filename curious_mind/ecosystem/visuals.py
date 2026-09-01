@@ -9,6 +9,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 TROPHIC_Y = {
+    "decomposer": -1,   # drawn below the producers — the "soil level"
     "producer": 0,
     "primary_consumer": 1,
     "secondary_consumer": 2,
@@ -16,6 +17,7 @@ TROPHIC_Y = {
 }
 
 TROPHIC_LABEL = {
+    "decomposer": "Decomposers",
     "producer": "Producers",
     "primary_consumer": "Herbivores",
     "secondary_consumer": "Carnivores",
@@ -23,6 +25,7 @@ TROPHIC_LABEL = {
 }
 
 TROPHIC_COLOR = {
+    "decomposer": "#92400E",
     "producer": "#16A34A",
     "primary_consumer": "#0EA5E9",
     "secondary_consumer": "#7C3AED",
@@ -150,7 +153,8 @@ def food_web_figure(
         legend_seen.add(label)
 
     # Tier guidelines for visual separation
-    for lvl in range(0, 4):
+    has_decomposers = -1 in by_level
+    for lvl in range(-1 if has_decomposers else 0, 4):
         fig.add_hline(
             y=lvl, line=dict(color="rgba(150,150,160,0.18)", width=1, dash="dot"),
             layer="below",
@@ -171,9 +175,10 @@ def food_web_figure(
         ),
         yaxis=dict(
             tickmode="array",
-            tickvals=[0, 1, 2, 3],
-            ticktext=["Producers", "Herbivores", "Carnivores", "Apex"],
-            range=[-0.6, 3.7],
+            tickvals=([-1] if has_decomposers else []) + [0, 1, 2, 3],
+            ticktext=(["Decomposers"] if has_decomposers else [])
+            + ["Producers", "Herbivores", "Carnivores", "Apex"],
+            range=[(-1.6 if has_decomposers else -0.6), 3.7],
             gridcolor="rgba(0,0,0,0)",
         ),
         height=520,
@@ -192,12 +197,14 @@ def food_web_figure(
 
 
 _INTRINSIC = {
+    "decomposer": 0.15,
     "producer": 0.20,
     "primary_consumer": 0.05,
     "secondary_consumer": -0.02,
     "apex_predator": -0.05,
 }
 _K_FOR = {
+    "decomposer": 600.0,
     "producer": 1000.0,
     "primary_consumer": 400.0,
     "secondary_consumer": 100.0,
@@ -332,6 +339,20 @@ def population_dynamics_figure(
             marker=dict(size=10, color=color, line=dict(color="white", width=1.5)),
             showlegend=False, hoverinfo="skip",
             legendgroup=sid,
+        ))
+    # Ghost curves: the full trajectories at low opacity, so the chart tells
+    # the story even before ▶ Play is pressed. Appended AFTER the animated
+    # traces — frames patch traces positionally (0..2n-1), so these are
+    # never overwritten.
+    for sid, s, color in trace_meta:
+        initial_data.append(go.Scatter(
+            x=t.tolist(), y=pops[sid],
+            mode="lines",
+            line=dict(width=1.1, color=color, shape="spline", smoothing=0.4),
+            opacity=0.22,
+            showlegend=False, hoverinfo="skip",
+            legendgroup=sid,
+            cliponaxis=True,
         ))
 
     # ---- frames: progressively reveal the time series --------------------
@@ -566,10 +587,15 @@ def _shannon_index(values: list[float]) -> float:
 def shannon_diversity_figure(populations: dict[str, float]) -> go.Figure:
     """Gauge indicator for the Shannon diversity index H'.
 
-    Range 0..~3 covers most realistic K-12 scenarios; we clip the gauge max
-    at 3.5 so a small system doesn't look broken.
+    H′ is bounded by ln(S) for S species, so the gauge axis and its
+    red/amber/green bands are scaled to the species count — a perfectly
+    even 2-species scene reads green instead of being stuck in a red zone
+    it could never leave.
     """
     h = _shannon_index(list(populations.values()))
+    s = len([v for v in populations.values() if v > 0])
+    h_max = math.log(max(s, 2))
+    axis_max = max(h_max * 1.15, 0.8)
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=h,
@@ -579,12 +605,12 @@ def shannon_diversity_figure(populations: dict[str, float]) -> go.Figure:
             font=dict(size=14, color="#1F3864"),
         ),
         gauge=dict(
-            axis=dict(range=[0, 3.5], tickwidth=1, tickcolor="#94A3B8"),
+            axis=dict(range=[0, axis_max], tickwidth=1, tickcolor="#94A3B8"),
             bar=dict(color="#0EA5E9"),
             steps=[
-                dict(range=[0, 1.0], color="#FEE2E2"),
-                dict(range=[1.0, 2.0], color="#FEF3C7"),
-                dict(range=[2.0, 3.5], color="#DCFCE7"),
+                dict(range=[0, 0.33 * h_max], color="#FEE2E2"),
+                dict(range=[0.33 * h_max, 0.66 * h_max], color="#FEF3C7"),
+                dict(range=[0.66 * h_max, axis_max], color="#DCFCE7"),
             ],
             threshold=dict(line=dict(color="#1F3864", width=3), thickness=0.8, value=h),
         ),
@@ -673,7 +699,9 @@ def keystone_impact_figure(
         xaxis=dict(domain=[0.0, 0.46], title="Years (with)"),
         yaxis=dict(title="Population", anchor="x"),
         xaxis2=dict(domain=[0.54, 1.0], title="Years (without)"),
-        yaxis2=dict(anchor="x2", showticklabels=False),
+        # matches="y" keeps both panels on the SAME scale — the whole point
+        # of a side-by-side comparison is the magnitude difference.
+        yaxis2=dict(anchor="x2", matches="y", showticklabels=False),
         height=420,
         margin=dict(l=60, r=20, t=110, b=60),
         legend=dict(
@@ -740,7 +768,9 @@ def climate_comparison_figure(
         xaxis=dict(domain=[0.0, 0.46], title="Years (baseline)"),
         yaxis=dict(title="Population", anchor="x"),
         xaxis2=dict(domain=[0.54, 1.0], title="Years (adjusted)"),
-        yaxis2=dict(anchor="x2", showticklabels=False),
+        # matches="y" keeps both panels on the SAME scale — the whole point
+        # of a side-by-side comparison is the magnitude difference.
+        yaxis2=dict(anchor="x2", matches="y", showticklabels=False),
         height=420,
         margin=dict(l=60, r=20, t=110, b=60),
         legend=dict(

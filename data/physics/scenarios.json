@@ -19,7 +19,7 @@
     "id": "mars_kick",
     "label": "🔴 Field goal on Mars",
     "scenario": "projectile",
-    "blurb": "Same kick, weaker gravity. Watch the ball float much higher and travel three times farther than on Earth.",
+    "blurb": "Same kick, weaker gravity. Watch the ball float much higher and travel about 2.6× farther than on Earth (range scales as 1/g).",
     "inputs": {"v0": 25.0, "angle_deg": 50.0, "g": 3.71, "y0": 0.0},
     "callout": "Lower g stretches time-of-flight; range scales as v₀²/g."
   },
@@ -100,7 +100,7 @@
     "label": "💜 UV pops electrons",
     "scenario": "photoelectric",
     "blurb": "Switch to a UV lamp on zinc. Each photon now packs more than the work function — electrons fly out with measurable kinetic energy.",
-    "inputs": {"pe_metal": "zinc", "pe_freq_hz": 1.4e15, "pe_intensity_rel": 0.4, "pe_phi": 4.33},
+    "inputs": {"pe_metal": "zinc", "pe_freq_hz": 1.4e15, "pe_intensity_rel": 0.4},
     "callout": "KE_max = h·f − φ. Brighter light = more electrons, not faster ones."
   },
   {

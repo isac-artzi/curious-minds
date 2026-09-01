@@ -36,6 +36,7 @@ def page_setup(title: str, icon: str) -> None:
           .cm-header .crumb {{ color: {GRAY}; font-size: 0.85rem; }}
           .cm-info {{
             background: #F4F6FA;
+            color: #1A1F2E;
             border-left: 3px solid {TEAL};
             padding: 0.6rem 0.9rem;
             border-radius: 4px;
@@ -44,6 +45,7 @@ def page_setup(title: str, icon: str) -> None:
           }}
           .cm-warn {{
             background: #FFF7ED;
+            color: #1A1F2E;
             border-left: 3px solid {AMBER};
             padding: 0.6rem 0.9rem;
             border-radius: 4px;
@@ -115,7 +117,7 @@ def follow_up_buttons(suggestions: list[str], state_key_prefix: str) -> str | No
     clicked: str | None = None
     for i, sug in enumerate(suggestions[:3]):
         with cols[i]:
-            if st.button(sug, key=f"{state_key_prefix}_followup_{i}", use_container_width=True):
+            if st.button(sug, key=f"{state_key_prefix}_followup_{i}", width="stretch"):
                 clicked = sug
     return clicked
 

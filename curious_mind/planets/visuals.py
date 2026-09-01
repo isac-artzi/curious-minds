@@ -69,29 +69,8 @@ def system_diagram(
         )
     )
 
-    # Animation: orbit the planet
+    # Animation: orbit the planet (frames patch only the planet trace)
     n_frames = 36
-    frames = []
-    for i in range(n_frames):
-        ang = 2 * math.pi * i / n_frames
-        frames.append(
-            go.Frame(
-                data=[
-                    go.Scatter(),  # placeholder — keep HZ
-                    go.Scatter(),
-                    go.Scatter(),
-                    go.Scatter(
-                        x=[planet_distance_AU * math.cos(ang)],
-                        y=[planet_distance_AU * math.sin(ang)],
-                        mode="markers",
-                        marker=dict(size=14, color="#2E5496", line=dict(color="white", width=1.5)),
-                    ),
-                ],
-                traces=[len(fig.data) - 1],
-                name=str(i),
-            )
-        )
-    # Workaround: rebuild frames targeting just last trace
     frames = []
     for i in range(n_frames):
         ang = 2 * math.pi * i / n_frames
@@ -124,6 +103,7 @@ def system_diagram(
         updatemenus=[
             dict(
                 type="buttons",
+                direction="left",
                 showactive=False,
                 x=0.02, y=0.05,
                 buttons=[
@@ -139,7 +119,19 @@ def system_diagram(
                                 mode="immediate",
                             ),
                         ],
-                    )
+                    ),
+                    dict(
+                        label="⏸ Pause",
+                        method="animate",
+                        args=[[None], dict(frame=dict(duration=0, redraw=False),
+                                           mode="immediate")],
+                    ),
+                    dict(
+                        label="↺ Restart",
+                        method="animate",
+                        args=[["0"], dict(frame=dict(duration=0, redraw=True),
+                                          mode="immediate")],
+                    ),
                 ],
             )
         ],
@@ -147,11 +139,33 @@ def system_diagram(
     return fig
 
 
+# Fixed color per gas so the same gas keeps its color as rank order shifts
+# between runs (default Plotly colorway assigns by position, not identity).
+_GAS_COLOR = {
+    "N2": "#2E5496",
+    "O2": "#16A34A",
+    "CO2": "#D97706",
+    "CH4": "#7C3AED",
+    "H2O": "#0EA5E9",
+    "H2": "#EC4899",
+    "He": "#F59E0B",
+    "Ar": "#6B7280",
+    "NH3": "#14B8A6",
+    "SO2": "#DC2626",
+    "Ne": "#A78BFA",
+}
+_GAS_FALLBACK = ["#94A3B8", "#64748B", "#475569", "#334155"]
+
+
 def atmosphere_donut(composition: dict[str, float]) -> go.Figure:
     items = [(k, v) for k, v in composition.items() if v > 0]
     items.sort(key=lambda kv: -kv[1])
     labels = [k for k, _ in items]
     values = [v for _, v in items]
+    colors = [
+        _GAS_COLOR.get(k, _GAS_FALLBACK[i % len(_GAS_FALLBACK)])
+        for i, k in enumerate(labels)
+    ]
     fig = go.Figure(
         go.Pie(
             labels=labels,
@@ -163,7 +177,7 @@ def atmosphere_donut(composition: dict[str, float]) -> go.Figure:
             insidetextorientation="horizontal",
             outsidetextfont=dict(size=11),
             insidetextfont=dict(size=12, color="white"),
-            marker=dict(line=dict(color="white", width=2)),
+            marker=dict(colors=colors, line=dict(color="white", width=2)),
         )
     )
     # Generous margins so the outside-label leader lines don't clip at the

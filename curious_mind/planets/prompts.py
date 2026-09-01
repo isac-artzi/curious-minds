@@ -100,7 +100,7 @@ FALLBACK = PlanetResult(
         avg_temperature_C=-5.0,
         surface_pressure_atm=1.0,
         gravity_g=1.0,
-        day_length_hours=288.0,
+        day_length_hours=268.8,
         radiation_environment="Frequent stellar flares; high UV/X-ray during flare events.",
     ),
     sky_description=(

@@ -106,7 +106,7 @@ with st.sidebar:
         st.caption("One-click curated scenarios. Each loads inputs and runs.")
         _scenarios = data_loader.load_scenarios()
         for s in _scenarios:
-            if st.button(s["label"], key=f"phy_scn_{s['id']}", use_container_width=True):
+            if st.button(s["label"], key=f"phy_scn_{s['id']}", width="stretch"):
                 _apply_scenario_preset(s)
                 st.toast(f"Loaded: {s['label']}")
                 st.rerun()
@@ -129,9 +129,10 @@ with st.sidebar:
 
     if scenario == "projectile":
         st.markdown("### Launch")
-        inp["v0"] = st.slider("Initial speed v₀ (m/s)", 1.0, 100.0,
-                              float(inp["v0"]), 1.0,
-                              help="Speed at launch. 25 m/s ≈ a major-league fastball.")
+        inp["v0"] = st.slider("Initial speed v₀ (m/s)", 0.0, 100.0,
+                              float(inp["v0"]), 0.5,
+                              help="Speed at launch. 0 = a pure drop · "
+                                   "25 m/s ≈ a major-league fastball.")
         inp["angle_deg"] = st.slider("Launch angle θ (°)", 0.0, 90.0,
                                      float(inp["angle_deg"]), 1.0,
                                      help="Angle above horizontal. 45° gives max range "
@@ -223,7 +224,7 @@ with st.sidebar:
         )
         if inp["col_type"] == "partial":
             inp["col_e"] = st.slider("Restitution e", 0.05, 0.95,
-                                     float(inp["col_e"]), 0.05,
+                                     min(max(float(inp["col_e"]), 0.05), 0.95), 0.05,
                                      help="0 = perfectly inelastic, 1 = perfectly elastic.")
         st.markdown("**Per-disk mass and velocity**")
         # Make sure the lists are long enough (in case an older preset loaded).
@@ -252,11 +253,25 @@ with st.sidebar:
 
     elif scenario == "spring":
         st.markdown("### Mass on a spring")
-        inp["spring_m"] = st.slider("Mass m (kg)", 0.05, 10.0,
-                                    float(inp["spring_m"]), 0.05)
-        inp["spring_k"] = st.slider("Spring constant k (N/m)", 1.0, 200.0,
-                                    float(inp["spring_k"]), 1.0,
-                                    help="Stiffness. Higher = faster oscillation.")
+        # select_sliders with the current value merged into the options, so
+        # presets like the tuning fork (1 g, 7700 N/m) never crash the page.
+        _cur_m = float(inp["spring_m"])
+        inp["spring_m"] = st.select_slider(
+            "Mass m (kg)",
+            options=sorted({0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
+                            1.0, 2.0, 5.0, 10.0} | {_cur_m}),
+            value=_cur_m,
+            format_func=lambda m: f"{m:g}",
+        )
+        _cur_k = float(inp["spring_k"])
+        inp["spring_k"] = st.select_slider(
+            "Spring constant k (N/m)",
+            options=sorted({1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0,
+                            500.0, 1000.0, 2000.0, 5000.0, 7700.0, 10000.0} | {_cur_k}),
+            value=_cur_k,
+            format_func=lambda k: f"{k:g}",
+            help="Stiffness. Higher = faster oscillation.",
+        )
         inp["spring_x0"] = st.slider("Initial displacement x₀ (m)", -0.5, 0.5,
                                      float(inp["spring_x0"]), 0.01,
                                      help="Stretch (+) or compression (−) at t = 0.")
@@ -344,7 +359,7 @@ with st.sidebar:
         st.session_state.pop("phy_challenge_prediction", None)
         st.rerun()
 
-    run_btn = st.button("⚡ Run scenario", type="primary", use_container_width=True)
+    run_btn = st.button("⚡ Run scenario", type="primary", width="stretch")
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +368,54 @@ with st.sidebar:
 inp = st.session_state.phy_inputs
 scenario = inp["scenario"]
 C = 2.99792458e8
+
+
+def _collision_multi_sim(inp: dict) -> dict:
+    """Run the full 2-D multi-disk collision sim from the page inputs.
+
+    Single source of truth for BOTH the on-screen charts and the payload
+    sent to Claude, so the narrative can never describe a different
+    experiment than the one rendered.
+    """
+    ctype = inp["col_type"]
+    if ctype == "elastic":
+        e_used, plastic_used = 1.0, False
+    elif ctype == "plastic":
+        e_used, plastic_used = 0.0, True
+    else:  # partial
+        e_used, plastic_used = float(inp["col_e"]), False
+
+    # Initial layout: put 2 disks face-to-face on the x-axis so the
+    # default vx signs aim them at each other; place 3+ disks evenly
+    # on an ellipse fitted inside the plane rectangle.
+    n_disks = int(inp["col_n"])
+    Lx = float(inp["col_plane_x"])
+    Lz = float(inp["col_plane_z"])
+    rx = 0.62 * Lx
+    rz = 0.62 * Lz
+    if n_disks == 2:
+        positions = [(-rx, 0.0), (+rx, 0.0)]
+    else:
+        positions = [
+            (rx * math.cos(2 * math.pi * i / n_disks),
+             rz * math.sin(2 * math.pi * i / n_disks))
+            for i in range(n_disks)
+        ]
+    disks = [
+        {
+            "m":  float(inp["col_masses"][i]),
+            "x":  positions[i][0],
+            "z":  positions[i][1],
+            "vx": float(inp["col_vxs"][i]),
+            "vz": float(inp["col_vzs"][i]),
+        }
+        for i in range(n_disks)
+    ]
+    return simulators.collision_multi(
+        disks, e=e_used, plastic=plastic_used,
+        mu_k=float(inp["col_mu_k"]),
+        plane_half_x=Lx, plane_half_z=Lz,
+    )
 
 
 def _payload_and_render() -> tuple[dict, dict, str]:
@@ -367,7 +430,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                  "the red dot marks where it lands. Press ▶ Play to animate the projectile.",
         )
         st.plotly_chart(visuals.projectile_figure(sim, inp["v0"], inp["angle_deg"]),
-                        use_container_width=True)
+                        width="stretch")
         cols = st.columns(4)
         cols[0].metric("Range", f"{sim['range_m']:.1f} m",
                        help="Horizontal distance travelled before landing.")
@@ -406,7 +469,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                  "applied force you set with the slider. Arrow lengths scale with magnitude.",
         )
         st.plotly_chart(visuals.incline_figure(sim, inp["incline_angle"]),
-                        use_container_width=True)
+                        width="stretch")
         cols = st.columns(4)
         verdict_short = {
             "static": "🟰 Static",
@@ -450,7 +513,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                  "reachable, red dots = not enough energy after friction. PE shrinks "
                  "with height; KE picks up the slack until friction eats too much.",
         )
-        st.plotly_chart(visuals.rollercoaster_figure(sim), use_container_width=True)
+        st.plotly_chart(visuals.rollercoaster_figure(sim), width="stretch")
         # Metrics: speed at end + how much energy lost
         ke_end = sim["ke_J"][-1]
         v_end = (2 * ke_end / sim["mass_kg"]) ** 0.5 if ke_end > 0 else 0.0
@@ -480,46 +543,14 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         }}, "Why this happens"
 
     elif scenario == "collision":
-        # Map the collision-type radio to (e, plastic) for the simulator.
         ctype = inp["col_type"]
-        if ctype == "elastic":
-            e_used, plastic_used = 1.0, False
-        elif ctype == "plastic":
-            e_used, plastic_used = 0.0, True
-        else:  # partial
-            e_used, plastic_used = float(inp["col_e"]), False
-
-        # Initial layout: put 2 disks face-to-face on the x-axis so the
-        # default vx signs aim them at each other; place 3+ disks evenly
-        # on an ellipse fitted inside the plane rectangle.
+        e_used = 1.0 if ctype == "elastic" else (
+            0.0 if ctype == "plastic" else float(inp["col_e"])
+        )
         n_disks = int(inp["col_n"])
         Lx = float(inp["col_plane_x"])
         Lz = float(inp["col_plane_z"])
-        rx = 0.62 * Lx
-        rz = 0.62 * Lz
-        if n_disks == 2:
-            positions = [(-rx, 0.0), (+rx, 0.0)]
-        else:
-            positions = [
-                (rx * math.cos(2 * math.pi * i / n_disks),
-                 rz * math.sin(2 * math.pi * i / n_disks))
-                for i in range(n_disks)
-            ]
-        disks = []
-        for i in range(n_disks):
-            disks.append({
-                "m":  float(inp["col_masses"][i]),
-                "x":  positions[i][0],
-                "z":  positions[i][1],
-                "vx": float(inp["col_vxs"][i]),
-                "vz": float(inp["col_vzs"][i]),
-            })
-
-        sim = simulators.collision_multi(
-            disks, e=e_used, plastic=plastic_used,
-            mu_k=float(inp["col_mu_k"]),
-            plane_half_x=Lx, plane_half_z=Lz,
-        )
+        sim = _collision_multi_sim(inp)
 
         st.subheader(
             "💥 2-D collisions on a bounded plane",
@@ -529,7 +560,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                  "the line-of-centres restitution rule.",
         )
         st.plotly_chart(visuals.collision_2d_figure(sim),
-                        use_container_width=True)
+                        width="stretch")
         if sim["n_collisions"] == 0 and sim["n_wall_hits"] == 0:
             ui.warn_panel("ℹ️ Nothing collides with these velocities. Try "
                           "aiming the disks toward each other or reducing the "
@@ -564,7 +595,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                 "hits to see the navy arrow stay identical between the two panels."
             )
         st.plotly_chart(visuals.collision_momentum_figure(sim),
-                        use_container_width=True)
+                        width="stretch")
 
         st.subheader(
             "⚡ Energy budget",
@@ -573,7 +604,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
                  "or friction with the plane.",
         )
         st.plotly_chart(visuals.collision_energy_figure(sim),
-                        use_container_width=True)
+                        width="stretch")
 
         # Metrics row
         cols = st.columns(4)
@@ -647,7 +678,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         )
         st.plotly_chart(
             visuals.spring_figure(sim, inp["spring_m"], inp["spring_k"]),
-            use_container_width=True,
+            width="stretch",
         )
         cols = st.columns(4)
         cols[0].metric("Period T", f"{sim['period_s']:.3f} s",
@@ -687,7 +718,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         st.plotly_chart(visuals.photoelectric_animation(
             sim, inp["pe_freq_hz"], metal["work_function_eV"],
             inp["pe_intensity_rel"],
-        ), use_container_width=True)
+        ), width="stretch")
         st.subheader(
             "📈 KE_max vs frequency",
             help="Einstein's photoelectric equation as a line plot. Below the "
@@ -696,7 +727,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         )
         st.plotly_chart(visuals.photoelectric_figure(
             sim, inp["pe_freq_hz"], metal["work_function_eV"]
-        ), use_container_width=True)
+        ), width="stretch")
         cols = st.columns(4)
         cols[0].metric("Photon energy", f"{sim['photon_eV']:.2f} eV",
                        help="E = h·f.")
@@ -739,7 +770,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         )
         st.plotly_chart(visuals.de_broglie_animation(
             sim, particle["mass_kg"], inp["db_v_mps"], particle["name"]
-        ), use_container_width=True)
+        ), width="stretch")
         st.subheader(
             "📈 λ vs momentum (log-log)",
             help="Matter wavelength λ = h/p plotted across many decades. "
@@ -748,7 +779,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         )
         st.plotly_chart(visuals.de_broglie_figure(
             sim, particle["mass_kg"], inp["db_v_mps"], particle["name"]
-        ), use_container_width=True)
+        ), width="stretch")
 
         # ---- Young's double-slit ----
         d_m = inp["db_d_nm"] * 1e-9
@@ -767,7 +798,7 @@ def _payload_and_render() -> tuple[dict, dict, str]:
         else:
             ds = simulators.double_slit(lam, d_m, L_m)
             st.plotly_chart(visuals.double_slit_animation(ds, particle["name"]),
-                            use_container_width=True)
+                            width="stretch")
             ds_cols = st.columns(3)
             ds_cols[0].metric("Fringe spacing Δy",
                               f"{ds['fringe_spacing_m']:.2e} m",
@@ -838,16 +869,9 @@ def _compute_sim_only(scenario: str, inp: dict) -> dict:
             inp["rc_mu_k"], inp["rc_mass"],
         )
     if scenario == "collision":
-        # Theater only needs the 1-D summary numbers for two carts.
-        n = int(inp.get("col_n", 2))
-        if n >= 2:
-            m1, m2 = float(inp["col_masses"][0]), float(inp["col_masses"][1])
-            v1, v2 = float(inp["col_vxs"][0]), float(inp["col_vxs"][1])
-        else:
-            m1, m2, v1, v2 = 1.0, 1.0, 1.0, -1.0
-        ctype = inp.get("col_type", "elastic")
-        e_used = 1.0 if ctype == "elastic" else (0.0 if ctype == "plastic" else float(inp.get("col_e", 0.5)))
-        return simulators.collision_1d(m1, m2, v1, v2, e=e_used)
+        # The SAME 2-D multi-disk sim the charts show, so Claude's
+        # narrative and the challenge answers match the screen.
+        return _collision_multi_sim(inp)
     if scenario == "spring":
         return simulators.spring_shm(
             inp["spring_m"], inp["spring_k"],
@@ -936,6 +960,8 @@ def _payload_inputs(scenario: str, sim: dict, inp: dict) -> dict:
             "collision_type": ctype,
             "restitution_e": e_used,
             "mu_k": float(inp["col_mu_k"]),
+            "plane_half_x_m": float(inp["col_plane_x"]),
+            "plane_half_z_m": float(inp["col_plane_z"]),
         }}
     if scenario == "spring":
         return {"computed": sim, "inputs": {
@@ -973,7 +999,33 @@ payload = {
     **payload_inputs,
     "user_question": st.session_state.get("phy_user_question"),
 }
+# Drop a stale follow-up question as soon as any other input changes.
+_base_signature = _json.dumps(
+    {k: v for k, v in payload.items() if k != "user_question"},
+    sort_keys=True, default=str,
+)
+if st.session_state.get("phy_base_signature") not in (None, _base_signature):
+    st.session_state.pop("phy_user_question", None)
+    payload["user_question"] = None
+st.session_state["phy_base_signature"] = _base_signature
+
 input_signature = _json.dumps(payload, sort_keys=True, default=str)
+# Short unique id for widget keys: the first characters of the raw
+# signature are identical across runs, so hash the whole thing.
+import hashlib as _hashlib
+_sig_hash = _hashlib.md5(input_signature.encode()).hexdigest()[:12]
+
+# The Showcase-preset callout describes a specific curated setup; once the
+# user edits any input away from it, retire the banner.
+if st.session_state.get("phy_active_scenario_preset"):
+    _preset_sig = st.session_state.get("phy_active_preset_sig")
+    if _preset_sig is None:
+        st.session_state["phy_active_preset_sig"] = input_signature
+    elif _preset_sig != input_signature:
+        st.session_state.pop("phy_active_scenario_preset", None)
+        st.session_state.pop("phy_active_preset_callout", None)
+        st.session_state.pop("phy_active_preset_sig", None)
+
 should_run = (
     run_btn
     or "phy_last_result" not in st.session_state
@@ -1138,12 +1190,12 @@ if st.session_state.phy_challenge_mode:
                     options=list(range(len(q["options"]))),
                     format_func=lambda i, opts=q["options"]: opts[i],
                     index=0,
-                    key=f"phy_pred_{qi}",
+                    key=f"phy_pred_{_sig_hash}_{qi}",
                 )
                 picks.append(int(choice))
             submit_pred = st.form_submit_button(
                 "🔮 Reveal the answer", type="primary",
-                use_container_width=True,
+                width="stretch",
             )
         if submit_pred:
             st.session_state.phy_challenge_prediction = picks
@@ -1191,7 +1243,23 @@ if st.session_state.phy_challenge_mode:
 st.subheader("🎬 Apparatus Theater")
 components.html(
     render_theater(
-        scenario, _sim_pre, _theater_inp(scenario, inp),
+        scenario,
+        # The 2-cart theater hero needs the 1-D sim's v1'/v2' summary; every
+        # other scenario uses the same sim as the payload.
+        (
+            simulators.collision_1d(
+                float(inp["col_masses"][0]), float(inp["col_masses"][1]),
+                float(inp["col_vxs"][0]), float(inp["col_vxs"][1]),
+                e=(
+                    1.0 if inp["col_type"] == "elastic"
+                    else 0.0 if inp["col_type"] == "plastic"
+                    else float(inp["col_e"])
+                ),
+            )
+            if scenario == "collision" and int(inp.get("col_n", 2)) >= 2
+            else _sim_pre
+        ),
+        _theater_inp(scenario, inp),
         caption=result.visual_caption,
         dramatic=result.dramatic_moment,
     ),
@@ -1263,8 +1331,8 @@ if result.quiz:
         st.caption("Pick an answer, then click *Reveal* to check yourself.")
         for qi, q in enumerate(result.quiz):
             st.markdown(f"**Q{qi + 1}. {q.question}**")
-            ans_key = f"phy_quiz_{input_signature[:12]}_{qi}_ans"
-            rev_key = f"phy_quiz_{input_signature[:12]}_{qi}_rev"
+            ans_key = f"phy_quiz_{_sig_hash}_{qi}_ans"
+            rev_key = f"phy_quiz_{_sig_hash}_{qi}_rev"
             choice = st.radio(
                 "Your answer:",
                 options=q.choices,

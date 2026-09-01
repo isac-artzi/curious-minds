@@ -72,15 +72,15 @@ def projectile_figure(sim: dict, v0: float, angle_deg: float) -> go.Figure:
     for i in indices:
         frames.append(go.Frame(
             data=[
-                go.Scatter(x=xs, y=ys, mode="lines",
-                           line=dict(color=TEAL, width=3)),
                 go.Scatter(x=[xs[i]], y=[ys[i]], mode="markers",
                            marker=dict(size=14, color=NAVY,
                                        line=dict(color="white", width=2))),
             ],
+            # Patch ONLY the ball trace (index 3); without this, plotly
+            # patches traces 0 and 1 and the apex label rides the ball.
+            traces=[3],
             name=f"f{i}",
         ))
-    # Insert ball trace into base data so frame[1] aligns with it
     fig.add_trace(go.Scatter(
         x=[xs[0]], y=[ys[0]], mode="markers",
         marker=dict(size=14, color=NAVY, line=dict(color="white", width=2)),
@@ -275,10 +275,11 @@ def rollercoaster_figure(sim: dict) -> go.Figure:
 
     # Two-row subplot via single figure with two y-axes
     fig = go.Figure()
-    # Track silhouette (smooth-ish line through hilltops)
-    xs = list(range(len(heights)))
+    # Track silhouette (smooth-ish line through hilltops). Uses the same
+    # categorical x values as the energy bars — mixing numeric and category
+    # x on one axis silently drops the bars.
     fig.add_trace(go.Scatter(
-        x=xs, y=heights, mode="lines+markers",
+        x=labels, y=heights, mode="lines+markers",
         line=dict(color=GRAY, width=3, shape="spline", smoothing=0.6),
         marker=dict(size=14,
                     color=[GREEN if r else RED for r in reachable],
@@ -328,7 +329,7 @@ def rollercoaster_figure(sim: dict) -> go.Figure:
 # ---------------------------------------------------------------------------
 # 4. 2D collision (animated, true-radius disks, no pass-through)
 # ---------------------------------------------------------------------------
-def _circle_xy(cx: float, cy: float, r: float, n: int = 48) -> tuple[list[float], list[float]]:
+def _circle_xy(cx: float, cy: float, r: float, n: int = 32) -> tuple[list[float], list[float]]:
     """Polygon points tracing a circle in DATA units (so the visual radius
     matches the physics radius, regardless of plot zoom)."""
     th = np.linspace(0.0, 2 * math.pi, n + 1)
@@ -427,16 +428,19 @@ def collision_2d_figure(sim: dict) -> go.Figure:
     ))
 
     # ------------- animation frames ----------------------------------------
+    # Keep the figure JSON small on slow classroom laptops: the static border
+    # (trace 0) is never re-sent, trails are decimated to the display stride,
+    # and each frame patches only the moving traces via `traces=`.
+    trail_stride = max(1, stride)
     frames = []
+    moving_traces = list(range(1, 2 * n + 2))  # trails + disks + flash
     for fi in frame_idx:
-        data_list = [
-            go.Scatter(x=border_x, y=border_y, mode="lines",
-                       line=dict(color="#374151", width=2),
-                       fill="toself", fillcolor="rgba(241,245,249,0.65)"),
-        ]
+        data_list = []
         for i in range(n):
+            tx = xs[i][: fi + 1 : trail_stride] + [xs[i][fi]]
+            tz = zs[i][: fi + 1 : trail_stride] + [zs[i][fi]]
             data_list.append(go.Scatter(
-                x=xs[i][: fi + 1], y=zs[i][: fi + 1], mode="lines",
+                x=tx, y=tz, mode="lines",
                 line=dict(color=colors[i], width=1.4, dash="dot"),
             ))
         for i in range(n):
@@ -453,6 +457,7 @@ def collision_2d_figure(sim: dict) -> go.Figure:
         ))
         frames.append(go.Frame(
             data=data_list,
+            traces=moving_traces,
             layout=go.Layout(annotations=_mass_label_anns(fi)),
             name=f"f{fi}",
         ))
@@ -604,7 +609,7 @@ def collision_momentum_figure(sim: dict) -> go.Figure:
             xanchor="left", yanchor="bottom",
             text="<br>".join(rows), showarrow=False,
             align="left",
-            font=dict(size=10, family="JetBrains Mono, monospace"),
+            font=dict(size=12, family="JetBrains Mono, monospace"),
             bgcolor="rgba(255,255,255,0.92)",
             bordercolor=GRAY, borderwidth=1, borderpad=5,
         ))
@@ -720,7 +725,7 @@ def collision_energy_figure(sim: dict) -> go.Figure:
         margin=dict(l=60, r=20, t=110, b=40),
         plot_bgcolor="#FAFBFC",
         legend=dict(orientation="h", yanchor="bottom", y=1.005,
-                    xanchor="left", x=0.0, font=dict(size=10)),
+                    xanchor="left", x=0.0, font=dict(size=12)),
     )
     return fig
 
@@ -1006,7 +1011,7 @@ def _freq_to_visible_color(f_Hz: float) -> str:
 def photoelectric_animation(sim: dict, freq_hz: float, phi_eV: float,
                             intensity_rel: float) -> go.Figure:
     """Animated photoelectric scene: photons stream into a metal slab; if
-    hf ≥ φ, electrons fly out the other side. Includes status banner and a
+    hf ≥ φ, electrons are ejected from the illuminated face. Includes status banner and a
     photon-energy / φ / KE_max bar comparison."""
     from plotly.subplots import make_subplots
 
@@ -1344,7 +1349,7 @@ def de_broglie_figure(sim: dict, mass_kg: float, v_mps: float,
             text=label,
             xanchor="left", yanchor="bottom",
             showarrow=False,
-            font=dict(size=10, color=GRAY),
+            font=dict(size=12, color=GRAY),
             bgcolor="rgba(255,255,255,0.75)",
             borderpad=2,
         )
@@ -1468,7 +1473,7 @@ def de_broglie_animation(sim: dict, mass_kg: float, v_mps: float,
         text=(f"<span style='color:{GRAY};'>wave shown at "
               f"<b>{cycles_on_screen:.1f}</b> cycles "
               f"(log-scaled — see caption below) · {regime}</span>"),
-        showarrow=False, font=dict(size=10, color=GRAY),
+        showarrow=False, font=dict(size=12, color=GRAY),
     )
     # Closest-scale corner box (top-right)
     fig.add_annotation(
@@ -1723,16 +1728,16 @@ def double_slit_animation(ds: dict, particle_name: str) -> go.Figure:
     fig.frames = frames
 
     fig.add_annotation(x=SOURCE_X, y=0.45, text="source",
-                       showarrow=False, font=dict(size=10, color=NAVY))
+                       showarrow=False, font=dict(size=12, color=NAVY))
     fig.add_annotation(x=BARRIER_X, y=SLIT_Y + 0.45, text="slit 1",
-                       showarrow=False, font=dict(size=10, color=NAVY))
+                       showarrow=False, font=dict(size=12, color=NAVY))
     fig.add_annotation(x=BARRIER_X, y=-SLIT_Y - 0.45, text="slit 2",
-                       showarrow=False, font=dict(size=10, color=NAVY))
+                       showarrow=False, font=dict(size=12, color=NAVY))
     fig.add_annotation(x=SCREEN_X, y=2.92, text="detector",
-                       showarrow=False, font=dict(size=10, color=NAVY))
+                       showarrow=False, font=dict(size=12, color=NAVY))
     fig.add_annotation(x=SCREEN_X + 0.7, y=-2.92,
                        text="↑ intensity I(y)",
-                       showarrow=False, font=dict(size=9, color=PURPLE),
+                       showarrow=False, font=dict(size=11, color=PURPLE),
                        xanchor="left")
 
     fig.add_annotation(

@@ -15,8 +15,10 @@ from . import MODEL_ID
 T = TypeVar("T", bound=BaseModel)
 
 # When True, validation failures show the raw model output + the validator error
-# in an expander so we can see exactly what Claude produced.
-DEBUG = os.environ.get("CURIOUS_MINDS_DEBUG", "1") == "1"
+# in an expander so we can see exactly what Claude produced. Off by default so
+# classroom/demo audiences never see raw tracebacks; set CURIOUS_MINDS_DEBUG=1
+# while developing.
+DEBUG = os.environ.get("CURIOUS_MINDS_DEBUG", "0") == "1"
 
 
 def _api_key() -> str | None:
@@ -90,11 +92,13 @@ def _repair_truncated_json(text: str) -> str:
         if ch == "{":
             stack.append("{")
             expect = "key"
+            safe = i + 1  # "{" alone is repairable to "{}"
             i += 1
             continue
         if ch == "[":
             stack.append("[")
             expect = "value"
+            safe = i + 1  # "[" alone is repairable to "[]"
             i += 1
             continue
         if ch in "}]":
@@ -153,18 +157,9 @@ def _repair_truncated_json(text: str) -> str:
     return out
 
 
-def _extract_json(text: str) -> str:
-    """Pull a JSON object out of a model response. Handles ```json fences and prose."""
-    # 1. Prefer fenced code block content if present.
-    m = _FENCE_RE.search(text)
-    if m:
-        candidate = m.group(1).strip()
-        if candidate.startswith("{") and candidate.endswith("}"):
-            return candidate
-    # 2. Otherwise grab the largest balanced {...} span.
-    start = text.find("{")
-    if start == -1:
-        raise ValueError("No JSON object found in model response.")
+def _balanced_span(text: str, start: int) -> str | None:
+    """Return the balanced {...} span starting at `start`, or None if the
+    braces never close (truncated response)."""
     depth = 0
     in_str = False
     esc = False
@@ -186,11 +181,45 @@ def _extract_json(text: str) -> str:
                 depth -= 1
                 if depth == 0:
                     return text[start : i + 1]
-    # Fall back to greedy slice
-    end = text.rfind("}")
-    if end == -1 or end < start:
-        raise ValueError("Unbalanced JSON in model response.")
-    return text[start : end + 1]
+    return None
+
+
+def _extract_json(text: str) -> str:
+    """Pull a JSON object out of a model response. Handles ```json fences,
+    surrounding prose (even prose containing braces), and truncation."""
+    # 1. Prefer fenced code block content if present.
+    m = _FENCE_RE.search(text)
+    if m:
+        candidate = m.group(1).strip()
+        if candidate.startswith("{"):
+            return candidate
+    # 2. Try each balanced {...} span in order; return the first that parses.
+    #    Keep non-parsing spans as repair candidates.
+    candidates: list[str] = []
+    pos = text.find("{")
+    if pos == -1:
+        raise ValueError("No JSON object found in model response.")
+    while pos != -1:
+        span = _balanced_span(text, pos)
+        if span is None:
+            # Braces never close — likely max_tokens truncation. Hand the
+            # tail to _repair_truncated_json, which knows how to close it.
+            candidates.append(text[pos:])
+            break
+        try:
+            json.loads(span)
+            return span
+        except json.JSONDecodeError:
+            candidates.append(span)
+        pos = text.find("{", pos + 1)
+    # Nothing parsed cleanly; return the longest candidate for repair.
+    return max(candidates, key=len)
+
+
+# Probe for distinguishing cache hits from real API calls: the function body
+# below only runs on a cache MISS, so it flips this flag; `call_structured`
+# resets it before each call and reads it afterwards.
+_cache_probe = {"miss": False}
 
 
 @st.cache_data(show_spinner=False)
@@ -203,6 +232,7 @@ def _cached_call(
     schema_skeleton: str = "",
 ) -> str:
     """Cached raw Claude call. Cache key includes the full prompt + payload."""
+    _cache_probe["miss"] = True
     client = _client()
     if client is None:
         raise RuntimeError("No Anthropic client available.")
@@ -228,7 +258,12 @@ def _cached_call(
         ],
     )
     parts = [b.text for b in msg.content if getattr(b, "type", None) == "text"]
-    return "".join(parts)
+    text = "".join(parts)
+    if "{" not in text:
+        # Garbage response: raise so st.cache_data does NOT cache it — the
+        # next run with the same inputs gets a fresh chance.
+        raise ValueError("Model response contained no JSON object.")
+    return text
 
 
 def _schema_skeleton(schema: Type[T]) -> str:
@@ -327,6 +362,7 @@ def call_structured(
     payload_json = json.dumps(user_payload, sort_keys=True, default=str)
     skeleton = _schema_skeleton(schema)
 
+    _cache_probe["miss"] = False
     try:
         raw = _cached_call(
             domain, system_prompt, payload_json, schema.__name__, max_tokens, skeleton
@@ -351,7 +387,8 @@ def call_structured(
                 obj = json.loads(_repair_truncated_json(json_text))
             validated = _try_validate(schema, obj)
             if validated is not None:
-                return validated, "live"
+                return validated, ("live" if _cache_probe["miss"] else "cached")
+            raise ValueError("Response did not match the expected schema.")
         except (ValueError, json.JSONDecodeError, ValidationError) as e:
             last_err = e
             last_raw = raw
@@ -377,5 +414,13 @@ def call_structured(
             break
 
     st.warning(f"Schema validation failed ({type(last_err).__name__}). Showing cached example.")
-    _show_debug("validation", last_raw, last_err)  # type: ignore[arg-type]
+    if last_err is not None:
+        _show_debug("validation", last_raw, last_err)
+    # Both attempts produced un-validatable output; drop the cached raw
+    # responses so re-running the same inputs gets a fresh call instead of
+    # replaying the failure forever.
+    try:
+        _cached_call.clear()
+    except Exception:
+        pass
     return fallback, "fallback"

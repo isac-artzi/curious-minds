@@ -278,8 +278,9 @@ def rate_vs_temperature_chart(
     Ea = float(activation_energy_kJ_per_mol)
     Ts = np.linspace(T_min, T_max, 240)
     ks = A * np.exp(-Ea / (R * Ts))
-    # Clamp for log: tiny floor
-    ks = np.where(ks < 1e-30, 1e-30, ks)
+    # Mask (don't floor) values below the log-plot range: a floored flat
+    # shelf reads as "the rate stops changing", which is teachably wrong.
+    ks = np.where(ks < 1e-30, np.nan, ks)
 
     k_now = A * math.exp(-Ea / (R * max(current_T_K, 1.0)))
     k_now = max(k_now, 1e-30)

@@ -57,6 +57,6 @@
     "charge_C": 0.0,
     "category": "macroscopic",
     "typical_speed_m_s": 800.0,
-    "notes": "9 mm round ≈ 10 g at ~800 m/s. Still vastly classical."
+    "notes": "Rifle round ≈ 10 g at ~800 m/s (a 9 mm handgun round is ~400 m/s). Still vastly classical."
   }
 ]

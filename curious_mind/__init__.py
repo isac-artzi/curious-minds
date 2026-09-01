@@ -1,4 +1,4 @@
-"""Curious Minds — three Streamlit science sandboxes powered by Claude."""
+"""Curious Minds — four Streamlit science sandboxes powered by Claude."""
 
 __version__ = "0.1.0"
 

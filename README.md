@@ -1,6 +1,6 @@
 # Curious Minds
 
-Three Streamlit science sandboxes powered by Claude — **Chemistry · Ecosystem · Planets**.
+Four Streamlit science sandboxes powered by Claude — **Chemistry · Ecosystem · Planets · Physics**.
 
 Built for K–12 STEM teachers, students, and the genuinely curious. Combine real, curated facts in unexpected ways and let Claude reason over them. The lesson is that AI is leverage on real knowledge, not a magician's hat.
 
@@ -20,11 +20,12 @@ streamlit run streamlit_app.py
 
 Open http://localhost:8501.
 
-## The three apps
+## The four apps
 
 - **🧪 Chemistry What-If Lab** — combine elements + conditions, get a balanced reaction, energy diagram, hazards, real-world connection.
 - **🌿 Ecosystem / Biome Lab** — pick a biome, populate species, inject events, watch the food web reorganize.
 - **🪐 Planet / Exoplanet Builder** — pick a star, dial in orbit / mass / atmosphere / water, get a habitability verdict + closest real exoplanet.
+- **🔬 Physics Lab** — seven scenarios from projectile motion to the photoelectric effect, each with a deterministic simulator plus Claude's narrative explanation.
 
 ## Knowledge bases
 
@@ -32,9 +33,9 @@ All curated data lives in `/data/<domain>/*.json`. Edit, fork, redeploy — that
 
 ## Saving experiments
 
-- **Auto-save** to your browser between sessions.
 - **💾 Save experiment** writes a portable `.curious` file. Email it, drop it in Drive, hand it to a student.
-- **🧪 Load starter experiment** gallery in each sandbox's sidebar — six to ten pre-built setups.
+- **📂 Load experiment** restores a saved `.curious` file from the sidebar.
+- **🧪 Starter experiments** gallery in each sandbox's sidebar — pre-built classroom-ready setups.
 
 ## Offline mode
 

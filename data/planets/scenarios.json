@@ -140,17 +140,17 @@
     "label": "🌍 Kepler-452 b",
     "blurb": "Super-Earth in the HZ of an older, brighter sun-like star.",
     "inputs": {
-      "star_name": "51 Pegasi",
+      "star_name": "Kepler-452",
       "distance_AU": 1.05,
       "mass_earth": 5.0,
-      "radius_earth": 1.5,
+      "radius_earth": 1.6,
       "rotation_period_hours": 24,
       "atmosphere_id": "earth_like",
       "water_pct": 60,
       "moons": 1,
       "magnetic_field": "strong"
     },
-    "callout": "Heavy gravity (~1.6 g) + older star — Earth's cousin, but a tough hike."
+    "callout": "Heavy gravity (~2 g) + older star — Earth's cousin, but a tough hike."
   },
   {
     "id": "hot_jupiter",
@@ -167,7 +167,7 @@
       "moons": 0,
       "magnetic_field": "strong"
     },
-    "callout": "First exoplanet ever found (1995). No surface. Glowing day side."
+    "callout": "First exoplanet found around a Sun-like star (1995). No surface. Glowing day side."
   },
   {
     "id": "ocean_world",

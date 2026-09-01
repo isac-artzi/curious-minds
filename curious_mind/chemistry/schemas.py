@@ -163,7 +163,7 @@ class QuizItem(BaseModel):
 
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
-    question: str
+    question: str = ""
     choices: list[str] = Field(default_factory=list)
     correct_index: int = 0
     explanation: str = ""
@@ -305,16 +305,19 @@ class ReactionResult(BaseModel):
             return []
         if isinstance(v, dict):
             v = [v]
-        # Generous raw cap (5) so we can still pick 2 good items after filtering.
-        return list(v)[:5]
+        # Keep only dict-shaped items so one stray string can't invalidate
+        # the whole result. Generous raw cap (5) so we can still pick 2 good
+        # items after filtering.
+        return [q for q in list(v) if isinstance(q, dict)][:5]
 
     @field_validator("quiz")
     @classmethod
     def _drop_bad_quiz(cls, v: list) -> list:
-        # Drop items with <2 choices or out-of-range correct_index, then cap at 2.
+        # Drop items with no question, <2 choices, or out-of-range
+        # correct_index, then cap at 2.
         out: list = []
         for q in v:
-            if len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
+            if q.question and len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
                 out.append(q)
         return out[:2]
 

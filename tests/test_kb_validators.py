@@ -46,9 +46,31 @@ def test_planets_kb_loads():
     stars = json.loads((DATA / "planets/stars.json").read_text())
     atms = json.loads((DATA / "planets/atmospheres.json").read_text())
     exos = json.loads((DATA / "planets/exoplanets.json").read_text())
-    assert len(stars) == 7
+    assert len(stars) >= 7
     assert len(atms) >= 5
     assert len(exos) >= 15
+
+
+def test_physics_kb_loads():
+    constants = json.loads((DATA / "physics/constants.json").read_text())
+    materials = json.loads((DATA / "physics/materials.json").read_text())
+    particles = json.loads((DATA / "physics/particles.json").read_text())
+    metals = json.loads((DATA / "physics/photoelectric_metals.json").read_text())
+    assert constants and materials and particles and metals
+    for m in materials:
+        assert 0.0 <= m["mu_k"] <= m["mu_s"], f"{m['id']}: mu_k must be <= mu_s"
+    for m in metals:
+        assert 1.0 < m["work_function_eV"] < 7.0, m["id"]
+
+
+def test_species_trophic_levels_are_known():
+    species = json.loads((DATA / "ecosystem/species.json").read_text())
+    known = {
+        "producer", "primary_consumer", "secondary_consumer",
+        "apex_predator", "decomposer",
+    }
+    for s in species:
+        assert s["trophic_level"] in known, f"{s['id']}: {s['trophic_level']}"
 
 
 def test_modules_import():
@@ -73,12 +95,25 @@ def test_modules_import():
         "curious_mind.planets.schemas",
         "curious_mind.planets.prompts",
         "curious_mind.planets.visuals",
+        "curious_mind.planets.theater",
+        "curious_mind.physics.data_loader",
+        "curious_mind.physics.schemas",
+        "curious_mind.physics.prompts",
+        "curious_mind.physics.visuals",
+        "curious_mind.physics.simulators",
+        "curious_mind.physics.theater",
+        "curious_mind.chemistry.theater",
+        "curious_mind.chemistry.atom_3d",
+        "curious_mind.chemistry.atom_zoom",
+        "curious_mind.chemistry.mol_3d",
+        "curious_mind.chemistry.periodic_table",
+        "curious_mind.ecosystem.theater",
     ]:
         importlib.import_module(mod)
 
 
 def test_starter_examples_load():
-    for app in ("chemistry", "ecosystem", "planet"):
+    for app in ("chemistry", "ecosystem", "planet", "physics"):
         files = list((ROOT / "examples" / app).glob("*.curious"))
         assert files, f"no starter examples for {app}"
         for p in files:

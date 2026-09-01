@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html as _html
+
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -98,7 +100,7 @@ with st.sidebar:
         st.caption("One-click curated experiments. Each loads reagents + conditions and runs.")
         _scenarios = data_loader.load_scenarios()
         for s in _scenarios:
-            if st.button(s["label"], key=f"scn_{s['id']}", use_container_width=True):
+            if st.button(s["label"], key=f"scn_{s['id']}", width="stretch"):
                 _apply_scenario(s)
                 st.toast(f"Loaded: {s['label']}")
                 st.rerun()
@@ -176,18 +178,18 @@ with st.sidebar:
         st.session_state.pop("chem_last_result", None)
         st.rerun()
 
-    run_btn = st.button("⚗️ Run reaction", type="primary", use_container_width=True)
+    run_btn = st.button("⚗️ Run reaction", type="primary", width="stretch")
     st.caption("Tip: any change to reagents or conditions auto-runs on next page render.")
     cc1, cc2 = st.columns(2)
     with cc1:
-        if st.button("♻️ Reset reagents", use_container_width=True,
+        if st.button("♻️ Reset reagents", width="stretch",
                      help="Clear all selected elements and compounds."):
             reset_picker_state(PICKER_KEY, [], {})
             st.session_state.pop("chem_last_result", None)
             st.session_state.pop("chem_last_signature", None)
             st.rerun()
     with cc2:
-        if st.button("🗑 Clear cache", use_container_width=True,
+        if st.button("🗑 Clear cache", width="stretch",
                      help="Forces a fresh call to Claude on the next reaction."):
             st.cache_data.clear()
             st.session_state.pop("chem_last_result", None)
@@ -235,11 +237,29 @@ user_payload = {
     },
     "mode": inputs["mode"],
     "knowledge_base": kb_subset,
+    "user_question": st.session_state.get("chem_user_question"),
 }
 
 # Detect any meaningful input change so we re-run without the user clicking
 import json as _json
+
+# A follow-up question applies to the inputs it was asked about; when any
+# OTHER input changes, drop it so later runs aren't answering an old question.
+_base_signature = _json.dumps(
+    {k: v for k, v in user_payload.items() if k != "user_question"},
+    sort_keys=True, default=str,
+)
+if st.session_state.get("chem_base_signature") not in (None, _base_signature):
+    st.session_state.pop("chem_user_question", None)
+    user_payload["user_question"] = None
+st.session_state["chem_base_signature"] = _base_signature
+
 input_signature = _json.dumps(user_payload, sort_keys=True, default=str)
+# Short unique id for widget keys: the first characters of the raw
+# signature are identical across runs, so hash the whole thing.
+import hashlib as _hashlib
+_sig_hash = _hashlib.md5(input_signature.encode()).hexdigest()[:12]
+
 should_run = (
     run_btn
     or "chem_last_result" not in st.session_state
@@ -332,7 +352,7 @@ if st.session_state.chem_challenge_mode:
                 index=0,
             )
             submit = st.form_submit_button("🔮 Reveal the answer", type="primary",
-                                           use_container_width=True)
+                                           width="stretch")
         if submit:
             st.session_state.chem_challenge_prediction = {
                 "energy": pred_energy,
@@ -386,7 +406,6 @@ with _theater_header_left:
 with _theater_header_right:
     _zoom_on = st.toggle(
         "🔬 Zoom into atoms",
-        value=st.session_state.get("chem_atom_zoom", False),
         key="chem_atom_zoom",
         help="Switch from the vessels view to an atom-level conservation scene.",
     )
@@ -478,14 +497,14 @@ with right:
                 help="Activation energy — the kinetic barrier the system must climb before products can form.",
             )
 if result.equilibrium_notes:
-    ui.info_panel(f"⚖️ <b>Equilibrium:</b> {result.equilibrium_notes}")
+    ui.info_panel(f"⚖️ <b>Equilibrium:</b> {_html.escape(result.equilibrium_notes)}")
 
 # ----- 3) Energy diagram + Sankey side by side -----------------------------
 ec1, ec2 = st.columns([3, 2])
 with ec1:
     st.plotly_chart(
         energy_diagram_for(result.enthalpy_class, result.enthalpy_kJ_per_mol),
-        use_container_width=True,
+        width="stretch",
     )
     with st.expander("ℹ️ How is this computed?"):
         st.markdown(
@@ -511,7 +530,7 @@ with ec2:
             ],
             enthalpy_kJ_per_mol=result.enthalpy_kJ_per_mol,
         ),
-        use_container_width=True,
+        width="stretch",
     )
     st.caption("Sankey: node thickness = mole share, not mass.")
 
@@ -529,7 +548,7 @@ with sc1:
     ]
     st.plotly_chart(
         stoichiometry_chart(reactant_records, products_for_chart),
-        use_container_width=True,
+        width="stretch",
     )
 
 with sc2:
@@ -540,7 +559,7 @@ with sc2:
                 result.activation_energy_kJ_per_mol,
                 st.session_state.chem_conditions["temperature_K"],
             ),
-            use_container_width=True,
+            width="stretch",
         )
         with st.expander("ℹ️ Arrhenius equation"):
             st.markdown(
@@ -572,8 +591,8 @@ if result.quiz:
         st.caption("Pick an answer, then click *Reveal* to check yourself.")
         for qi, q in enumerate(result.quiz):
             st.markdown(f"**Q{qi + 1}. {q.question}**")
-            ans_key = f"chem_quiz_{input_signature[:12]}_{qi}_ans"
-            rev_key = f"chem_quiz_{input_signature[:12]}_{qi}_rev"
+            ans_key = f"chem_quiz_{_sig_hash}_{qi}_ans"
+            rev_key = f"chem_quiz_{_sig_hash}_{qi}_rev"
             choice = st.radio(
                 "Your answer:",
                 options=q.choices,
@@ -621,7 +640,7 @@ if _selected_elements:
                             category=rec.get("category", ""),
                             name=rec.get("name", ""),
                         ),
-                        use_container_width=True,
+                        width="stretch",
                     )
                     cfg = electron_config(int(rec.get("atomic_number", 0)))
                     st.caption(
@@ -643,6 +662,10 @@ with st.expander("🧬 3D molecule view", expanded=False):
             st.caption("_(No 3D structure available from PubChem.)_")
             return
         components.html(mol_viewer_html(sdf, height=height), height=height + 10)
+        if not smiles and formula:
+            # Formula → CID lookup is ambiguous (C₂H₆O could be ethanol OR
+            # dimethyl ether) — be honest about what's shown.
+            st.caption(f"_A molecule with formula {formula} (isomer not guaranteed)._")
 
     # Build reactant + product lists once
     _reactant_panels = [
@@ -732,9 +755,10 @@ with st.expander("📖 Concepts (chemistry refresher)"):
 # ----- 8) Follow-ups -------------------------------------------------------
 clicked = ui.follow_up_buttons(result.follow_ups, "chem")
 if clicked:
-    # Add the question as a real change to the catalyst field so the LLM gets
-    # context AND so the input signature changes (avoiding cache hit).
-    cond = st.session_state.chem_conditions
-    cond["catalyst"] = f"{cond['catalyst']}  (also asking: {clicked})"
+    # Inject the question into the payload (same pattern as the other labs);
+    # the payload change also busts the cache so a fresh call runs.
+    st.session_state.chem_user_question = clicked
+    st.session_state.pop("chem_last_result", None)
+    st.session_state.pop("chem_last_signature", None)
     st.toast(f"Exploring: {clicked}")
     st.rerun()

@@ -28,19 +28,20 @@ def energy_diagram(
     ]
     labels = ["", "Reactants", "Transition state", "Products", ""]
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=xs,
-            y=ys,
+    def _trace(k: int) -> go.Scatter:
+        return go.Scatter(
+            x=xs[:k],
+            y=ys[:k],
             mode="lines+markers+text",
             line=dict(color="#1F3864", width=3, shape="spline"),
-            marker=dict(size=[0, 10, 12, 10, 0], color="#2E5496"),
-            text=labels,
+            marker=dict(size=[0, 10, 12, 10, 0][:k], color="#2E5496"),
+            text=labels[:k],
             textposition="top center",
             hovertemplate="%{text}: %{y:.0f} kJ/mol<extra></extra>",
         )
-    )
+
+    fig = go.Figure()
+    fig.add_trace(_trace(len(xs)))
     # ΔH annotation
     fig.add_annotation(
         x=4, y=product_energy,
@@ -53,15 +54,9 @@ def energy_diagram(
     )
 
     if animate:
-        frames = []
-        for k in range(2, 6):
-            frames.append(
-                go.Frame(
-                    data=[go.Scatter(x=xs[:k], y=ys[:k], mode="lines+markers")],
-                    name=str(k),
-                )
-            )
-        fig.frames = frames
+        fig.frames = [
+            go.Frame(data=[_trace(k)], name=str(k)) for k in range(2, len(xs) + 1)
+        ]
         fig.update_layout(
             updatemenus=[
                 dict(

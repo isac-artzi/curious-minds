@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from curious_mind import MODEL_ID, ui
+from curious_mind import MODEL_ID, llm, ui
 
 ui.page_setup("Curious Minds", "🔬")
 
@@ -93,7 +93,7 @@ st.markdown(
     """
 )
 
-if not __import__("curious_mind.llm", fromlist=["have_api_key"]).have_api_key():
+if not llm.have_api_key():
     ui.warn_panel(
         "🔌 <b>No <code>ANTHROPIC_API_KEY</code> detected.</b> The apps will run in cached "
         "example mode. Set the key in <code>.streamlit/secrets.toml</code> (local) or in the "

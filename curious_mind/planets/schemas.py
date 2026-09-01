@@ -95,18 +95,27 @@ class QuizItem(BaseModel):
 
 class SurfaceConditions(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    avg_temperature_C: float = 0.0
+    # None = the model didn't provide one; callers fall back to the derived
+    # greenhouse estimate instead of silently displaying 0 °C.
+    avg_temperature_C: float | None = None
     surface_pressure_atm: float = 1.0
     gravity_g: float = 1.0
     day_length_hours: float = 24.0
     radiation_environment: str = ""
 
     @field_validator(
-        "avg_temperature_C", "surface_pressure_atm", "gravity_g", "day_length_hours",
+        "surface_pressure_atm", "gravity_g", "day_length_hours",
         mode="before",
     )
     @classmethod
     def _coerce_num(cls, v):
+        return _coerce_float(v, 0.0)
+
+    @field_validator("avg_temperature_C", mode="before")
+    @classmethod
+    def _coerce_temp(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
         return _coerce_float(v, 0.0)
 
     @field_validator("radiation_environment", mode="before")
@@ -242,13 +251,13 @@ class PlanetResult(BaseModel):
             return []
         if isinstance(v, dict):
             v = [v]
-        return list(v)[:5]
+        return [q for q in list(v) if isinstance(q, dict)][:5]
 
     @field_validator("quiz")
     @classmethod
     def _drop_bad_quiz(cls, v):
         out = []
         for q in v:
-            if len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
+            if q.question and len(q.choices) >= 2 and 0 <= q.correct_index < len(q.choices):
                 out.append(q)
         return out[:2]

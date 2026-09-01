@@ -76,8 +76,17 @@ _AUTO_REACTIVE_PAIRS = (
 )
 
 
+def _split_key(key: str) -> tuple[str, str]:
+    """Split a 'kind:ident' picker key; tolerate malformed keys from
+    hand-edited .curious files instead of crashing the page."""
+    if ":" in key:
+        kind, ident = key.split(":", 1)
+        return kind, ident
+    return "", key
+
+
 def _melting_point_K(key: str) -> float | None:
-    kind, ident = key.split(":", 1)
+    kind, ident = _split_key(key)
     if kind == "element":
         rec = element_by_symbol(ident) or {}
     else:
@@ -89,7 +98,7 @@ def _melting_point_K(key: str) -> float | None:
 def _categories(selected_keys: list[str]) -> list[str]:
     cats: list[str] = []
     for k in selected_keys:
-        kind, ident = k.split(":", 1)
+        kind, ident = _split_key(k)
         if kind == "element":
             rec = element_by_symbol(ident) or {}
             cat = rec.get("category")
@@ -107,8 +116,11 @@ def sanity_warnings(selected_keys: list[str], conditions: dict) -> list[str]:
         return []
 
     warnings: list[str] = []
-    T = float(conditions.get("temperature_K", 298.0))
-    P = float(conditions.get("pressure_atm", 1.0))
+    try:
+        T = float(conditions.get("temperature_K", 298.0))
+        P = float(conditions.get("pressure_atm", 1.0))
+    except (TypeError, ValueError):
+        T, P = 298.0, 1.0
     catalyst = str(conditions.get("catalyst", "")).strip().lower()
     near_stp = 200.0 <= T <= 400.0 and 0.5 <= P <= 5.0
 
@@ -152,7 +164,6 @@ def sanity_warnings(selected_keys: list[str], conditions: dict) -> list[str]:
         len(selected_keys) >= 2
         and near_stp
         and not any(cue in catalyst for cue in _HIGH_ENERGY_CUES)
-        and catalyst not in {"none", "", "—", "-"}
     ):
         cats = set(_categories(selected_keys))
         auto_reactive = any(pair.issubset(cats) for pair in _AUTO_REACTIVE_PAIRS)
@@ -171,7 +182,7 @@ def relevant_kb_subset(selected_keys: list[str]) -> dict:
     elements = []
     compounds = []
     for k in selected_keys:
-        kind, ident = k.split(":", 1)
+        kind, ident = _split_key(k)
         if kind == "element":
             rec = element_by_symbol(ident)
             if rec:

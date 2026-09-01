@@ -3,8 +3,8 @@
 This is intentionally a simplified, K-12-friendly representation:
 - Nucleus at origin as a single sphere (not resolved into protons/neutrons).
 - Electron shells as concentric rings on alternating planes.
-- Shell capacities use the simple K=2, L=8, M=8/18, N=8/18/32, O=8/18/32, P=8/18, Q=8
-  pattern; we do NOT model Aufbau exceptions (Cr, Cu, etc.).
+- Shell occupancies come from Madelung-order subshell filling (2-8-8-2 for Ca,
+  2-8-18-7 for Br, …); we do NOT model Aufbau exceptions (Cr, Cu, Ag, etc.).
 """
 
 from __future__ import annotations
@@ -16,9 +16,19 @@ import plotly.graph_objects as go
 
 from .visuals import CATEGORY_COLOR
 
-# Conventional electron-shell capacities (K, L, M, N, O, P, Q).
-# These are the *historical Bohr* capacities, fine for K-12 visualization.
-SHELL_CAPACITY = [2, 8, 8, 18, 18, 32, 32]
+# Subshells in Madelung (Aufbau) filling order as (principal n, capacity).
+# Summing filled subshells per n gives the standard textbook shell
+# occupancies (e.g. Ca = 2-8-8-2, Br = 2-8-18-7) — the naive "fill each
+# shell to capacity" rule gets these wrong past Z = 20.
+_MADELUNG_SUBSHELLS = [
+    (1, 2),           # 1s
+    (2, 2), (2, 6),   # 2s 2p
+    (3, 2), (3, 6),   # 3s 3p
+    (4, 2), (3, 10), (4, 6),    # 4s 3d 4p
+    (5, 2), (4, 10), (5, 6),    # 5s 4d 5p
+    (6, 2), (4, 14), (5, 10), (6, 6),   # 6s 4f 5d 6p
+    (7, 2), (5, 14), (6, 10), (7, 6),   # 7s 5f 6d 7p
+]
 
 # Three orthogonal ring planes, cycled per shell for visual depth.
 # Each tuple is (axis-1 unit, axis-2 unit) — ring lies in the plane spanned by them.
@@ -30,16 +40,23 @@ _PLANES = [
 
 
 def electron_config(atomic_number: int) -> list[int]:
-    """Distribute Z electrons across simple Bohr shells, low-to-high capacity."""
+    """Electrons per shell (K, L, M, …) from Madelung-order subshell filling.
+
+    Matches the standard textbook shell occupancies for all elements (we
+    deliberately ignore the handful of Aufbau exceptions like Cr and Cu —
+    they differ by one electron and don't change the K-12 story).
+    """
     z = max(int(atomic_number), 0)
-    config: list[int] = []
-    for cap in SHELL_CAPACITY:
+    shells: dict[int, int] = {}
+    for n, cap in _MADELUNG_SUBSHELLS:
         if z <= 0:
             break
-        n = min(cap, z)
-        config.append(n)
-        z -= n
-    return config
+        take = min(cap, z)
+        shells[n] = shells.get(n, 0) + take
+        z -= take
+    if not shells:
+        return []
+    return [shells.get(n, 0) for n in range(1, max(shells) + 1)]
 
 
 def _ring_points(radius: float, plane_idx: int, n_points: int = 96) -> tuple[list[float], list[float], list[float]]:

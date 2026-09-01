@@ -1,5 +1,5 @@
 [
-  {"id":"combustion_h2","name":"Hydrogen combustion","equation":"2H_2 + O_2 \\rightarrow 2H_2O","enthalpy_kJ_per_mol":-286,"class":"combustion","conditions":"spark or flame","real_world":"Hydrogen fuel cells, Space Shuttle main engines."},
+  {"id":"combustion_h2","name":"Hydrogen combustion","equation":"2H_2 + O_2 \\rightarrow 2H_2O","enthalpy_kJ_per_mol":-572,"class":"combustion","conditions":"spark or flame","real_world":"Hydrogen fuel cells, Space Shuttle main engines."},
   {"id":"combustion_ch4","name":"Methane combustion","equation":"CH_4 + 2O_2 \\rightarrow CO_2 + 2H_2O","enthalpy_kJ_per_mol":-890,"class":"combustion","conditions":"ignition","real_world":"Natural-gas stoves, power plants."},
   {"id":"haber","name":"Haber–Bosch ammonia synthesis","equation":"N_2 + 3H_2 \\rightarrow 2NH_3","enthalpy_kJ_per_mol":-92,"class":"synthesis","conditions":"450°C, 200 atm, Fe catalyst","real_world":"Fertilizer for ~50% of world food production."},
   {"id":"neutralization_hcl_naoh","name":"Strong acid–base neutralization","equation":"HCl + NaOH \\rightarrow NaCl + H_2O","enthalpy_kJ_per_mol":-57,"class":"neutralization","conditions":"aqueous, room T","real_world":"Antacids, lab pH adjustment."},

@@ -82,7 +82,7 @@ def equilibrium_temperature_K(
     sigma = 5.670374419e-8
     AU = 1.495978707e11
     L = luminosity_solar * L_sun
-    d = distance_AU * AU
+    d = max(distance_AU, 1e-6) * AU
     flux = L / (4 * math.pi * d * d)
     T = (((1 - albedo) * flux) / (4 * sigma)) ** 0.25
     return T
@@ -234,6 +234,9 @@ def apply_atmosphere_tweak(atm: dict, tweak: dict | None) -> dict:
     only — pressure is its own knob).
     """
     if not tweak or tweak.get("action") in (None, "none", ""):
+        return atm
+    if not tweak.get("gas"):
+        # Malformed tweak (no gas named) — treat as no-op rather than crash.
         return atm
     comp: dict[str, float] = {k: float(v) for k, v in atm.get("composition", {}).items()}
     gas = tweak.get("gas")
@@ -430,7 +433,7 @@ def simulate_injection(
     Returns dict with time series of composition (% per gas) and greenhouse ΔT.
     Returns None if no tweak active.
     """
-    if not tweak or tweak.get("action") in (None, "none", ""):
+    if not tweak or tweak.get("action") in (None, "none", "") or not tweak.get("gas"):
         return None
 
     # Numpy is heavy but already a Streamlit dep
@@ -481,14 +484,15 @@ def simulate_injection(
     series = {g: matrix[i].tolist() for i, g in enumerate(all_gases)}
 
     # Greenhouse temperature offset relative to baseline composition.
-    # Effect-per-doubling values (rough): CO2 +3.7 °C, CH4 +0.5 °C, H2O +3 °C.
+    # Rough warming-per-doubling values (°C): CO2 +3 (Earth's equilibrium
+    # climate sensitivity), CH4 +0.5, H2O +3. Heuristic, not a climate model.
     def _log2_ratio(c: float, c_ref: float) -> float:
         c_safe = max(c, 1e-3)
         c_ref_safe = max(c_ref, 1e-3)
         return math.log2(c_safe / c_ref_safe)
 
     dT = []
-    factors = {"CO2": 3.7, "CH4": 0.5, "H2O": 3.0}
+    factors = {"CO2": 3.0, "CH4": 0.5, "H2O": 3.0}
     for i in range(len(t)):
         delta = 0.0
         for g, factor in factors.items():
@@ -515,8 +519,11 @@ def closest_real_exoplanet(
     radius_earth: float,
     distance_AU: float,
     host_class: str,
-) -> dict:
-    """Find the nearest real exoplanet by simple normalized log-space distance."""
+) -> dict | None:
+    """Find the nearest real exoplanet by simple normalized log-space distance.
+
+    Returns None if the exoplanet knowledge base is empty.
+    """
     best = None
     best_score = float("inf")
     for ex in load_exoplanets():

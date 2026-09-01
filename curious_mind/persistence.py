@@ -32,12 +32,16 @@ def deserialize(raw: bytes | str, expected_app: App) -> dict[str, Any]:
     """Parse a .curious file. Raises ValueError on schema/app mismatch."""
     text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
     obj = json.loads(text)
+    if not isinstance(obj, dict):
+        raise ValueError("Not a Curious Minds experiment file (expected a JSON object).")
     if obj.get("schema") != SCHEMA:
         raise ValueError(f"Not a Curious Minds experiment file (schema={obj.get('schema')!r}).")
     if obj.get("app") != expected_app:
         raise ValueError(
             f"This file is for the '{obj.get('app')}' sandbox, not '{expected_app}'."
         )
+    if not isinstance(obj.get("inputs", {}), dict):
+        raise ValueError("Experiment file is corrupt: 'inputs' must be an object.")
     return obj
 
 
@@ -73,7 +77,7 @@ def render_persistence_sidebar(
             file_name=f"{title.lower().replace(' ', '_') or 'experiment'}.curious",
             mime="application/json",
             key=f"{app}_save_btn",
-            use_container_width=True,
+            width="stretch",
         )
 
         uploaded = st.file_uploader(
@@ -102,13 +106,19 @@ def render_persistence_sidebar(
         if not starters:
             st.caption("No starters shipped for this app yet.")
         for p in starters:
+            obj: dict[str, Any] | None
             try:
                 obj = load_starter(p)
-                label = obj.get("title", p.stem)
+                if not isinstance(obj, dict):
+                    obj = None
             except Exception:
-                label = p.stem
-            if st.button(label, key=f"{app}_starter_{p.name}", use_container_width=True):
+                obj = None
+            label = obj.get("title", p.stem) if obj else p.stem
+            if obj is None:
+                st.caption(f"⚠️ {label} (file unreadable)")
+                continue
+            if st.button(label, key=f"{app}_starter_{p.name}", width="stretch"):
                 loaded = obj.get("inputs", {})
 
-    st.sidebar.caption("🔒 Auto-saved to this browser · Save to file for keeps")
+    st.sidebar.caption("🔒 Settings live for this browser session · Save to file for keeps")
     return loaded

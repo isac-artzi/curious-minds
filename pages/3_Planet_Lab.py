@@ -106,7 +106,7 @@ def _planet_temp_bucket(T_C: float) -> str:
 def _planet_challenge_questions(derived: dict, result: "PlanetResult", inputs: dict) -> list[dict]:
     T_C = (
         result.surface.avg_temperature_C
-        if result.surface.avg_temperature_C
+        if result.surface.avg_temperature_C is not None
         else derived["greenhouse_surface_T_C"]
     )
     return [
@@ -151,11 +151,10 @@ with st.sidebar:
         st.caption("One-click curated planets — handy for demos.")
         scenarios = data_loader.load_scenarios()
         for scn in scenarios:
-            cols = st.columns([1, 0.001])
-            if cols[0].button(
+            if st.button(
                 scn.get("label", scn["id"]),
                 key=f"planet_preset_{scn['id']}",
-                use_container_width=True,
+                width="stretch",
                 help=scn.get("blurb", ""),
             ):
                 _apply_planet_scenario(scn)
@@ -200,11 +199,20 @@ with st.sidebar:
     )
     st.caption(star.get("notes", ""))
 
+    def _slider_options(base: list[float], current: float) -> list[float]:
+        """Merge the current value into a select_slider's options so preset /
+        .curious-loaded values outside the base ladder never crash the page."""
+        return sorted(set(base) | {current})
+
     st.markdown("### Orbit")
+    _cur_au = float(st.session_state.planet_inputs.get("distance_AU", 1.0))
     distance_AU = st.select_slider(
         "Orbital distance (AU)",
-        options=[0.01, 0.03, 0.05, 0.1, 0.3, 0.5, 1.0, 1.5, 3.0, 5.0, 10.0, 30.0, 100.0],
-        value=st.session_state.planet_inputs.get("distance_AU", 1.0),
+        options=_slider_options(
+            [0.01, 0.03, 0.05, 0.1, 0.3, 0.5, 1.0, 1.5, 3.0, 5.0, 10.0, 30.0, 100.0],
+            _cur_au,
+        ),
+        value=_cur_au,
         help=(
             "Average distance from the host star, in Astronomical Units. "
             "1 AU = Earth–Sun distance ≈ 150 million km."
@@ -212,20 +220,35 @@ with st.sidebar:
     )
 
     st.markdown("### Planet")
-    mass_earth = st.slider(
-        "Mass (Earth masses)", min_value=0.1, max_value=20.0,
-        value=float(st.session_state.planet_inputs["mass_earth"]), step=0.1,
+    _cur_mass = float(st.session_state.planet_inputs["mass_earth"])
+    mass_earth = st.select_slider(
+        "Mass (Earth masses)",
+        options=_slider_options(
+            [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0,
+             7.0, 10.0, 15.0, 20.0, 30.0, 50.0, 100.0, 150.0, 317.8],
+            _cur_mass,
+        ),
+        value=_cur_mass,
+        format_func=lambda m: {317.8: "317.8 (Jupiter)"}.get(m, f"{m:g}"),
         help="Planet mass relative to Earth (1 M⊕ = 5.97 × 10²⁴ kg).",
     )
-    radius_earth = st.slider(
-        "Radius (Earth radii)", min_value=0.3, max_value=5.0,
-        value=float(st.session_state.planet_inputs["radius_earth"]), step=0.1,
+    _cur_radius = float(st.session_state.planet_inputs["radius_earth"])
+    radius_earth = st.select_slider(
+        "Radius (Earth radii)",
+        options=_slider_options(
+            [0.3, 0.5, 0.7, 1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 3.0, 4.0, 5.0,
+             7.0, 9.0, 11.2, 13.0],
+            _cur_radius,
+        ),
+        value=_cur_radius,
+        format_func=lambda r: {11.2: "11.2 (Jupiter)"}.get(r, f"{r:g}"),
         help="Planet radius relative to Earth (1 R⊕ = 6,371 km).",
     )
+    _cur_rot = int(st.session_state.planet_inputs.get("rotation_period_hours", 24))
     rotation_period_hours = st.select_slider(
         "Rotation period (hours)",
-        options=[1, 6, 10, 12, 24, 48, 100, 240, 720, 1408, 2000, 5832],
-        value=int(st.session_state.planet_inputs.get("rotation_period_hours", 24)),
+        options=sorted(set([1, 6, 10, 12, 24, 48, 100, 240, 720, 1408, 2000, 5832]) | {_cur_rot}),
+        value=_cur_rot,
         format_func=lambda h: {
             10: "10 h (Jupiter)", 24: "24 h (Earth)", 1408: "1408 h (Mercury)",
             5832: "5832 h (Venus, retrograde)",
@@ -423,7 +446,7 @@ with st.sidebar:
         st.session_state.planet_inputs = {**_default_inputs(), **loaded}
         st.rerun()
 
-    run_btn = st.button("🪐 Build planet", type="primary", use_container_width=True)
+    run_btn = st.button("🪐 Build planet", type="primary", width="stretch")
 
 
 # ---- main ------------------------------------------------------------------
@@ -513,7 +536,32 @@ payload = {
     "user_question": st.session_state.get("planet_user_question"),
 }
 
+# Drop a stale follow-up question as soon as any other input changes.
+_base_signature = _json.dumps(
+    {k: v for k, v in payload.items() if k != "user_question"},
+    sort_keys=True, default=str,
+)
+if st.session_state.get("planet_base_signature") not in (None, _base_signature):
+    st.session_state.pop("planet_user_question", None)
+    payload["user_question"] = None
+st.session_state["planet_base_signature"] = _base_signature
+
 input_signature = _json.dumps(payload, sort_keys=True, default=str)
+# Short unique id for widget keys: the first characters of the raw
+# signature are identical across runs, so hash the whole thing.
+import hashlib as _hashlib
+_sig_hash = _hashlib.md5(input_signature.encode()).hexdigest()[:12]
+
+# The Showcase-preset callout describes a specific curated setup; once the
+# user edits any input away from it, retire the banner.
+if st.session_state.get("planet_active_scenario"):
+    _preset_sig = st.session_state.get("planet_active_preset_sig")
+    if _preset_sig is None:
+        st.session_state["planet_active_preset_sig"] = input_signature
+    elif _preset_sig != input_signature:
+        st.session_state.pop("planet_active_scenario", None)
+        st.session_state.pop("planet_active_preset_sig", None)
+
 should_run = (
     run_btn
     or "planet_last_result" not in st.session_state
@@ -537,6 +585,10 @@ if should_run:
 result: PlanetResult = st.session_state.planet_last_result
 source: str = st.session_state.planet_last_source
 
+# Show live/cached/fallback status immediately (the other labs do), so the
+# teacher can tell demo mode from live reasoning even before the reveal.
+ui.source_indicator(source)
+
 # ---- Challenge gate state --------------------------------------------------
 _challenge_on = bool(st.session_state.get("planet_challenge_mode", False))
 _revealed = (not _challenge_on) or (
@@ -551,7 +603,9 @@ components.html(
         distance_AU=inputs["distance_AU"],
         radius_earth=inputs["radius_earth"],
         atmosphere_id=inputs["atmosphere_id"],
-        surface_T_C=result.surface.avg_temperature_C if result.surface.avg_temperature_C else T_surf_C,
+        surface_T_C=result.surface.avg_temperature_C
+        if result.surface.avg_temperature_C is not None
+        else T_surf_C,
         surface_pressure_atm=result.surface.surface_pressure_atm or atm.get("surface_pressure_atm", 1.0),
         water_pct=int(inputs["water_pct"]),
         moons=int(inputs["moons"]),
@@ -587,7 +641,7 @@ if not _revealed:
         _predictions: dict[str, str] = {}
         for q in _q_list:
             _predictions[q["key"]] = st.radio(
-                q["prompt"], q["choices"], key=f"planet_pp_{q['key']}",
+                q["prompt"], q["choices"], key=f"planet_pp_{_sig_hash}_{q['key']}",
             )
         _submitted = st.form_submit_button("🔬 Reveal", type="primary")
     if _submitted:
@@ -641,7 +695,7 @@ with c1:
     )
     st.plotly_chart(
         system_diagram(star_class_data["color_hex"], hz_inner, hz_outer, inputs["distance_AU"]),
-        use_container_width=True,
+        width="stretch",
     )
     in_hz = derived["in_habitable_zone"]
     # Year — pretty format depending on magnitude
@@ -670,7 +724,7 @@ with c2:
              "showing what the sky would look like at noon — combination of stellar "
              "colour and Rayleigh scattering through this atmosphere.",
     )
-    st.plotly_chart(atmosphere_donut(atm["composition"]), use_container_width=True)
+    st.plotly_chart(atmosphere_donut(atm["composition"]), width="stretch")
     if inputs["atmosphere_tweak"].get("action") not in (None, "none"):
         t = inputs["atmosphere_tweak"]
         ui.info_panel(
@@ -730,7 +784,7 @@ st.caption(
     "Dips show wavelengths where the atmosphere absorbs starlight; each gas has "
     "a fingerprint pattern."
 )
-st.plotly_chart(transmission_spectrum_figure(atm["composition"]), use_container_width=True)
+st.plotly_chart(transmission_spectrum_figure(atm["composition"]), width="stretch")
 
 # ---- Biosignatures (deterministic) -----------------------------------------
 biosignatures = data_loader.detect_biosignatures(
@@ -789,7 +843,7 @@ if inputs["atmosphere_tweak"].get("action") not in (None, "none"):
             "how the climate responds in real time.",
             unsafe_allow_html=True,
         )
-        st.plotly_chart(injection_evolution_figure(sim), use_container_width=True)
+        st.plotly_chart(injection_evolution_figure(sim), width="stretch")
         with st.expander("ℹ️ How is this computed?"):
             st.markdown(
                 """
@@ -812,7 +866,6 @@ biological feedbacks, or weathering. Real Earth-system models include all of the
 """
             )
 
-ui.source_indicator(source)
 if result.confidence == "speculative":
     ui.speculation_banner()
 
@@ -844,9 +897,14 @@ elif _day_h >= 240:
 else:
     _day_metric = f"{_day_h:.0f} h"
 
+_avg_T_C = (
+    result.surface.avg_temperature_C
+    if result.surface.avg_temperature_C is not None
+    else T_surf_C
+)
 m1, m2, m3, m4, m5, m6 = st.columns(6)
 m1.metric(
-    "Avg surface T", f"{result.surface.avg_temperature_C:+.0f} °C",
+    "Avg surface T", f"{_avg_T_C:+.0f} °C",
     help="Claude's estimate of mean surface temperature, accounting for atmosphere and greenhouse.",
 )
 m2.metric(
@@ -1041,7 +1099,7 @@ if clicked:
 if result.quiz:
     st.divider()
     st.subheader("🧠 Quiz me on this world")
-    _qkey_prefix = f"planet_quiz_{(input_signature or '')[:12]}"
+    _qkey_prefix = f"planet_quiz_{_sig_hash}"
     for idx, q in enumerate(result.quiz):
         with st.expander(f"Question {idx + 1}: {q.question}", expanded=False):
             picked = st.radio(

@@ -105,8 +105,18 @@ def mol_viewer_html(sdf: str, *, height: int = 320, style: str = "stick") -> str
 <script src="https://3dmol.org/build/3Dmol-min.js"></script>
 <script>
 (function() {{
+  var attempts = 0;
   function init() {{
     if (typeof $3Dmol === 'undefined') {{
+      attempts += 1;
+      if (attempts > 50) {{
+        // CDN blocked (school firewall) — show a message instead of
+        // polling forever over a blank box.
+        var el = document.getElementById("{div_id}");
+        if (el) el.innerHTML = '<div style="padding:1rem;color:#5B6478;' +
+          'font-size:0.85rem;">3D viewer could not load (network blocked?).</div>';
+        return;
+      }}
       setTimeout(init, 80);
       return;
     }}

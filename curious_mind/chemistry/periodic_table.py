@@ -95,6 +95,11 @@ CATEGORY_BORDER = {
 }
 
 
+# The ~120-rule CSS block is deterministic per state_key (the element KB is
+# static), so build it once per session instead of on every rerun.
+_CSS_CACHE: dict[str, str] = {}
+
+
 def _inject_css(state_key: str, elements: list[dict]) -> None:
     """Style every periodic-table button by category via st-key-{key} class.
 
@@ -102,6 +107,10 @@ def _inject_css(state_key: str, elements: list[dict]) -> None:
     element name (bottom-center) are added via per-element ::before / ::after
     pseudo-elements so the cell stays a clean fixed-size rectangle.
     """
+    cached = _CSS_CACHE.get(state_key)
+    if cached is not None:
+        st.markdown(cached, unsafe_allow_html=True)
+        return
     rules = [
         f"""
         div[class*="st-key-{state_key}_pt_"] {{
@@ -197,13 +206,15 @@ def _inject_css(state_key: str, elements: list[dict]) -> None:
         div[class*="st-key-{state_key}_pt_{cat}_{sym}"] button::after {{
             content: "{name}";
             position: absolute; left: 0; right: 0; bottom: 4px;
-            font-size: 0.55rem; font-weight: 500; line-height: 1;
+            font-size: 0.6rem; font-weight: 500; line-height: 1;
             color: #1F2937; text-align: center;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             padding: 0 2px;
         }}
         """)
-    st.markdown(f"<style>{''.join(rules)}</style>", unsafe_allow_html=True)
+    css = f"<style>{''.join(rules)}</style>"
+    _CSS_CACHE[state_key] = css
+    st.markdown(css, unsafe_allow_html=True)
 
 
 def _ensure_state(state_key: str, defaults: dict) -> None:
@@ -276,7 +287,7 @@ def _button_for_element(state_key: str, elem: dict) -> None:
         label,
         key=f"{state_key}_pt_{cat}_{sym}",
         help=" · ".join(tooltip_bits),
-        use_container_width=True,
+        width="stretch",
         type="primary" if selected else "secondary",
         on_click=_toggle,
         args=(state_key, item_key),
@@ -420,3 +431,12 @@ def reset_picker_state(state_key: str, selected: list[str], quantities: dict[str
     """Force-replace picker state. Call before render_picker on starter load."""
     st.session_state[f"{state_key}_selected"] = list(selected)
     st.session_state[f"{state_key}_quantities"] = dict(quantities)
+    # Streamlit widget state is sticky: the per-reagent quantity sliders keep
+    # their old values unless their widget keys are rewritten BEFORE they
+    # render. Without this, a preset that says "2 mol" silently runs with
+    # whatever the slider last showed.
+    prefix = f"{state_key}_qty_"
+    for wkey in [k for k in st.session_state.keys() if str(k).startswith(prefix)]:
+        del st.session_state[wkey]
+    for k, q in quantities.items():
+        st.session_state[f"{prefix}{k}"] = float(q)

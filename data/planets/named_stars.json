@@ -3,6 +3,7 @@
   {"name":"Alpha Centauri A","spectral_class":"G","luminosity_solar":1.52,"mass_solar":1.1,"age_Gyr":5.3,"flare_active":false,"notes":"Closest G-type star to Earth; binary with Alpha Cen B."},
   {"name":"Tau Ceti","spectral_class":"G","luminosity_solar":0.52,"mass_solar":0.78,"age_Gyr":10.0,"flare_active":false,"notes":"Old, quiet G-type star with multiple known planets."},
   {"name":"51 Pegasi","spectral_class":"G","luminosity_solar":1.36,"mass_solar":1.11,"age_Gyr":6.1,"flare_active":false,"notes":"First sun-like star found to host an exoplanet (1995)."},
+  {"name":"Kepler-452","spectral_class":"G","luminosity_solar":1.2,"mass_solar":1.04,"age_Gyr":6.0,"flare_active":false,"notes":"Sun-like G2 star ~1,800 ly away, ~1.5 Gyr older than the Sun; hosts Kepler-452 b."},
   {"name":"Alpha Centauri B","spectral_class":"K","luminosity_solar":0.5,"mass_solar":0.9,"age_Gyr":5.3,"flare_active":false,"notes":"K-dwarf companion to Alpha Cen A; quiet, mature."},
   {"name":"Epsilon Eridani","spectral_class":"K","luminosity_solar":0.34,"mass_solar":0.82,"age_Gyr":0.4,"flare_active":true,"notes":"Young K-dwarf with mild flare activity and a debris disk."},
   {"name":"Sigma Draconis","spectral_class":"K","luminosity_solar":0.41,"mass_solar":0.85,"age_Gyr":3.0,"flare_active":false,"notes":"Quiet K-dwarf about 19 light-years away."},
