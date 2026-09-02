@@ -16,6 +16,15 @@ scientific answer — labeled by how confident it should be.
 [🔬 Open the app](https://rural-stem-curious-minds.streamlit.app/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [💻 Fork it on GitHub](https://github.com/isac-artzi/curious-minds){: .btn .fs-5 .mb-4 .mb-md-0 }
 
+{: .note }
+> **At the summit?**
+> [📋 Session Padlet](https://padlet.com/isac_artzi/rural-stem-curious-minds-s0236puvd4e8d6tjx4oc) ·
+> [💬 Discord](https://discord.gg/e2YXtkXX7j) ·
+> [🔬 The app](https://rural-stem-curious-minds.streamlit.app/)
+>
+> On a laptop and the QR code went to your phone? You're in the right place —
+> everything is linked here.
+
 ---
 
 ## The four labs

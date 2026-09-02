@@ -63,6 +63,40 @@ with c4:
 
 st.divider()
 
+# ── Conference session links ────────────────────────────────────────────────
+# Shown so attendees on a laptop can reach the Padlet / Discord in one click
+# instead of retyping a long URL from their phone.
+PADLET_URL = "https://padlet.com/isac_artzi/rural-stem-curious-minds-s0236puvd4e8d6tjx4oc"
+GUIDE_URL = "https://isac-artzi.github.io/curious-minds/"
+DISCORD_URL = "https://discord.gg/e2YXtkXX7j"
+
+st.markdown("### 📌 Session links")
+st.markdown(
+    f"""
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+      <a href="{PADLET_URL}" target="_blank" style="
+         flex:1 1 200px; text-decoration:none; padding:0.85rem 1rem; border-radius:8px;
+         background:#1F3864; color:white; font-weight:600; text-align:center;">
+         📋 Session Padlet</a>
+      <a href="{GUIDE_URL}" target="_blank" style="
+         flex:1 1 200px; text-decoration:none; padding:0.85rem 1rem; border-radius:8px;
+         background:#2E5496; color:white; font-weight:600; text-align:center;">
+         📚 Teacher Guide</a>
+      <a href="{DISCORD_URL}" target="_blank" style="
+         flex:1 1 200px; text-decoration:none; padding:0.85rem 1rem; border-radius:8px;
+         background:#5865F2; color:white; font-weight:600; text-align:center;">
+         💬 Discord</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.caption(
+    "On a laptop? Everything from the session is one click away here — "
+    "no need to retype anything from your phone."
+)
+
+st.divider()
+
 st.markdown("### How it works")
 st.markdown(
     f"""
