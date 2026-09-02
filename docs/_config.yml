@@ -27,12 +27,12 @@ aux_links:
   "⬅ Back to the repo":
     - "https://github.com/isac-artzi/curious-minds"
   "🔬 Open the app":
-    - "https://curious-minds-fmpnt5azskogw3dzwdlf6e.streamlit.app/"
+    - "https://rural-stem-curious-minds.streamlit.app/"
 aux_links_new_tab: true
 
 nav_external_links:
   - title: 🔬 Open the live app
-    url: https://curious-minds-fmpnt5azskogw3dzwdlf6e.streamlit.app/
+    url: https://rural-stem-curious-minds.streamlit.app/
   - title: 💻 Source on GitHub
     url: https://github.com/isac-artzi/curious-minds
 

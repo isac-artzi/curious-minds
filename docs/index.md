@@ -13,7 +13,7 @@ Four science sandboxes where students ask *“what happens if…?”* and get a 
 scientific answer — labeled by how confident it should be.
 {: .fs-6 .fw-300 }
 
-[🔬 Open the app](https://curious-minds-fmpnt5azskogw3dzwdlf6e.streamlit.app/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[🔬 Open the app](https://rural-stem-curious-minds.streamlit.app/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [💻 Fork it on GitHub](https://github.com/isac-artzi/curious-minds){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
