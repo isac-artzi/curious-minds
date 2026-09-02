@@ -18,7 +18,7 @@ scientific answer — labeled by how confident it should be.
 
 {: .note }
 > **At the summit?**
-> [📋 Session Padlet](https://padlet.com/isac_artzi/rural-stem-curious-minds-s0236puvd4e8d6tjx4oc) ·
+> [📋 Session Padlet](https://padlet.com/isac_artzi/rural_stem_2026) ·
 > [💬 Discord](https://discord.gg/e2YXtkXX7j) ·
 > [🔬 The app](https://rural-stem-curious-minds.streamlit.app/)
 >

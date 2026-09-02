@@ -66,7 +66,7 @@ st.divider()
 # ── Conference session links ────────────────────────────────────────────────
 # Shown so attendees on a laptop can reach the Padlet / Discord in one click
 # instead of retyping a long URL from their phone.
-PADLET_URL = "https://padlet.com/isac_artzi/rural-stem-curious-minds-s0236puvd4e8d6tjx4oc"
+PADLET_URL = "https://padlet.com/isac_artzi/rural_stem_2026"
 GUIDE_URL = "https://isac-artzi.github.io/curious-minds/"
 DISCORD_URL = "https://discord.gg/e2YXtkXX7j"
 
