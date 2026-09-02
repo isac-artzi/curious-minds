@@ -23,6 +23,11 @@ st.markdown(
         Four browser-accessible science sandboxes — combine real, curated facts in unexpected
         ways and watch a small AI reason out the consequences.
       </p>
+      <p style="margin:0.9rem 0 0 0; font-size:0.9rem; opacity:0.9;">
+        Developed by <b>Isac Artzi, PhD</b> ·
+        <a href="https://sensym.ai" target="_blank"
+           style="color:#FFFFFF; text-decoration:underline;">SenSym LLC</a>
+      </p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -134,4 +139,4 @@ if not llm.have_api_key():
         "Streamlit Cloud Secrets manager (deployed) to enable live reasoning."
     )
 
-st.caption("MIT licensed · github.com/isac-artzi/curious-minds")
+ui.footer()

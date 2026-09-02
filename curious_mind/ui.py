@@ -9,6 +9,10 @@ TEAL = "#2E5496"
 AMBER = "#D97706"
 GRAY = "#5B6478"
 
+AUTHOR = "Isac Artzi, PhD"
+ORG = "SenSym LLC"
+ORG_URL = "https://sensym.ai"
+
 CONFIDENCE_COLOR = {
     "well_documented": "#16A34A",
     "probable": "#D97706",
@@ -67,6 +71,50 @@ def page_setup(title: str, icon: str) -> None:
             font-family: "JetBrains Mono", ui-monospace, monospace;
           }}
         </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    sidebar_brand()
+
+
+def sidebar_brand() -> None:
+    """Compact attribution at the top of the sidebar. Rendered on every page via
+    page_setup(), so it survives the early st.stop() paths in the labs."""
+    st.sidebar.markdown(
+        f"""
+        <div style="
+          border-left: 3px solid {NAVY};
+          padding: 0.15rem 0 0.15rem 0.6rem;
+          margin: 0 0 0.9rem 0;
+          line-height: 1.35;">
+          <div style="font-size:0.66rem; letter-spacing:0.1em; color:{GRAY};
+                      font-weight:700;">SENSYM EDUCATION</div>
+          <div style="font-size:0.78rem; color:{GRAY};">
+            Developed by <b style="color:{NAVY};">{AUTHOR}</b><br>
+            <a href="{ORG_URL}" target="_blank"
+               style="color:{TEAL}; text-decoration:none; font-weight:600;">{ORG} · sensym.ai</a>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def footer() -> None:
+    """Full attribution block for the bottom of a page."""
+    st.divider()
+    st.markdown(
+        f"""
+        <div style="color:{GRAY}; font-size:0.85rem; line-height:1.6;">
+          <b style="color:{NAVY};">Curious Minds</b> — developed by
+          <b style="color:{NAVY};">{AUTHOR}</b>,
+          <a href="{ORG_URL}" target="_blank"
+             style="color:{TEAL}; text-decoration:none; font-weight:600;">{ORG}</a>.<br>
+          MIT licensed · <a href="{ORG_URL}" target="_blank"
+             style="color:{TEAL}; text-decoration:none;">sensym.ai</a>
+          · <a href="https://github.com/isac-artzi/curious-minds" target="_blank"
+             style="color:{TEAL}; text-decoration:none;">github.com/isac-artzi/curious-minds</a>
+        </div>
         """,
         unsafe_allow_html=True,
     )

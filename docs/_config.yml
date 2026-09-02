@@ -52,8 +52,9 @@ callouts:
     color: green
 
 footer_content: >
-  Curious Minds — SenSym LLC · MIT licensed ·
-  Built for the National Rural STEM Learning Summit, Sept 3–4 2026.
+  <b>Curious Minds</b> — developed by <b>Isac Artzi, PhD</b>,
+  <a href="https://sensym.ai" target="_blank">SenSym LLC</a> ·
+  MIT licensed · Built for the National Rural STEM Learning Summit, Sept 3–4 2026.
 
 last_edit_timestamp: true
 last_edit_time_format: "%b %e %Y"
