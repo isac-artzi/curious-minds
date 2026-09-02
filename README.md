@@ -41,6 +41,18 @@ All curated data lives in `/data/<domain>/*.json`. Edit, fork, redeploy — that
 
 If `ANTHROPIC_API_KEY` is missing or the API is unreachable, the apps fall back to cached example outputs.
 
+## Documentation
+
+Full guides live in **[docs/](docs/)**:
+
+- **[Fork & Deploy](docs/FORK_AND_DEPLOY.md)** — your own copy in ~15 minutes, with real cost numbers
+- **[Prompt Cards](docs/PROMPT_CARDS.md)** — 24 classroom starters, six per lab
+- **[Lesson Plans](docs/lesson-plans/)** — eight 50-minute plans, two per lab
+- **[NGSS / CSTA Alignment](docs/NGSS_CSTA_ALIGNMENT.md)** — standards mapping
+- **[Architecture](docs/ARCHITECTURE.md)** — how the app actually works
+- **[Modifying](docs/MODIFYING.md)** — from JSON edits to adding a new lab
+- **[PRD](docs/PRD.md)** — the original spec, annotated with what changed
+
 ## License
 
 MIT. See `LICENSE`.
