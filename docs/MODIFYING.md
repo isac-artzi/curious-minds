@@ -1,3 +1,9 @@
+---
+layout: default
+title: "✏️ Modifying It"
+nav_order: 7
+---
+
 # Modifying Curious Minds
 
 Three tiers, easiest first. **Tier 1 needs no coding at all** — and it is where

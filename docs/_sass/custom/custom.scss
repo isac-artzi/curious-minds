@@ -1,0 +1,27 @@
+// Curious Minds brand overrides
+$link-color: #1F3864;
+$btn-primary-color: #1F3864;
+$nav-child-link-color: #5B6478;
+
+.site-title {
+  font-weight: 700 !important;
+  color: #1F3864 !important;
+}
+
+// Confidence-tier pills, used inline in prose
+.tier-green, .tier-amber, .tier-gray {
+  border-radius: 999px;
+  padding: 0.1em 0.6em;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tier-green { background: #DCFCE7; color: #166534; }
+.tier-amber { background: #FEF3C7; color: #92400E; }
+.tier-gray  { background: #F3F4F6; color: #4B5563; }
+
+// Make the big landing tables breathe
+.main-content table td { vertical-align: top; }
+
+// Tighten emoji-led headings
+.main-content h2, .main-content h3 { letter-spacing: -0.01em; }

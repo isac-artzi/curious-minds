@@ -1,3 +1,10 @@
+---
+layout: default
+title: "The Experiment That Broke Classical Physics"
+parent: "📖 Lesson Plans"
+nav_order: 8
+---
+
 # The Experiment That Broke Classical Physics
 
 **Grades 10–12 · 50 minutes · 🔬 Physics Lab**

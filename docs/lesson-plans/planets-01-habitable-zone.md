@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Finding Goldilocks"
+parent: "📖 Lesson Plans"
+nav_order: 5
+---
+
 # Finding Goldilocks
 
 **Grades 5–8 · 50 minutes · 🪐 Planet / Exoplanet Builder**

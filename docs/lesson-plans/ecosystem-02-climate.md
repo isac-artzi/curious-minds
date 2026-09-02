@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Two Degrees"
+parent: "📖 Lesson Plans"
+nav_order: 4
+---
+
 # Two Degrees
 
 **Grades 8–12 · 50 minutes · 🌿 Ecosystem / Biome Lab**

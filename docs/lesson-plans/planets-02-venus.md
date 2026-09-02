@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Twin Worlds, Different Fates"
+parent: "📖 Lesson Plans"
+nav_order: 6
+---
+
 # Twin Worlds, Different Fates
 
 **Grades 9–12 · 50 minutes · 🪐 Planet / Exoplanet Builder**

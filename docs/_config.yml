@@ -1,0 +1,61 @@
+title: Curious Minds
+description: Four browser-based science sandboxes for K-12 classrooms — free, forkable, no install.
+remote_theme: just-the-docs/just-the-docs
+
+url: https://isac-artzi.github.io
+baseurl: /curious-minds
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+exclude:
+  - README.md
+  - lesson-plans/README.md
+  - padlet.txt
+  - "*.docx"
+
+color_scheme: light
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 2
+
+heading_anchors: true
+
+aux_links:
+  "⬅ Back to the repo":
+    - "https://github.com/isac-artzi/curious-minds"
+  "🔬 Open the app":
+    - "https://curious-minds-fmpnt5azskogw3dzwdlf6e.streamlit.app/"
+aux_links_new_tab: true
+
+nav_external_links:
+  - title: 🔬 Open the live app
+    url: https://curious-minds-fmpnt5azskogw3dzwdlf6e.streamlit.app/
+  - title: 💻 Source on GitHub
+    url: https://github.com/isac-artzi/curious-minds
+
+callouts:
+  warning:
+    title: Heads up
+    color: red
+  note:
+    title: Note
+    color: blue
+  tip:
+    title: Try this
+    color: green
+
+footer_content: >
+  Curious Minds — SenSym LLC · MIT licensed ·
+  Built for the National Rural STEM Learning Summit, Sept 3–4 2026.
+
+last_edit_timestamp: true
+last_edit_time_format: "%b %e %Y"
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub"
+gh_edit_repository: "https://github.com/isac-artzi/curious-minds"
+gh_edit_branch: "main"
+gh_edit_source: docs
+gh_edit_view_mode: "edit"

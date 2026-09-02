@@ -1,3 +1,10 @@
+---
+layout: default
+title: "The Wolf and the River"
+parent: "📖 Lesson Plans"
+nav_order: 3
+---
+
 # The Wolf and the River
 
 **Grades 5–9 · 50 minutes · 🌿 Ecosystem / Biome Lab**

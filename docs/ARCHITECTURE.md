@@ -1,3 +1,9 @@
+---
+layout: default
+title: "🏗️ How It Works"
+nav_order: 6
+---
+
 # How Curious Minds Works
 
 *The "how did they do that?" answer, in prose.*

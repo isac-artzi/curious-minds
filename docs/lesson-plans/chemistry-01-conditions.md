@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Conditions Change Everything"
+parent: "📖 Lesson Plans"
+nav_order: 1
+---
+
 # Conditions Change Everything
 
 **Grades 6–9 · 50 minutes · 🧪 Chemistry What-If Lab**

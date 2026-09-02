@@ -1,3 +1,9 @@
+---
+layout: default
+title: "📋 The PRD"
+nav_order: 8
+---
+
 # Curious Minds — Product Requirements Document
 
 *The planning document this project was built from. Reproduced here as a

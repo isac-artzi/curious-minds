@@ -1,3 +1,9 @@
+---
+layout: default
+title: "🎴 Prompt Cards"
+nav_order: 3
+---
+
 # Prompt Cards
 
 **Twenty-four starter explorations — six per lab.** Print, cut along the lines,

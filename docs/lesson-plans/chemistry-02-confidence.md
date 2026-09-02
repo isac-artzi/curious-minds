@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Auditing the Machine"
+parent: "📖 Lesson Plans"
+nav_order: 2
+---
+
 # Auditing the Machine
 
 **Grades 9–12 · 50 minutes · 🧪 Chemistry What-If Lab**

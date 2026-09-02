@@ -1,3 +1,9 @@
+---
+layout: default
+title: "📐 NGSS & CSTA Alignment"
+nav_order: 5
+---
+
 # NGSS & CSTA Alignment
 
 **How to use this:** the alignments below are drafted from what each lab

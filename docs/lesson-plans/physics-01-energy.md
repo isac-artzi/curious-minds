@@ -1,3 +1,10 @@
+---
+layout: default
+title: "You Can't Climb Higher Than You Started"
+parent: "📖 Lesson Plans"
+nav_order: 7
+---
+
 # You Can't Climb Higher Than You Started
 
 **Grades 7–10 · 50 minutes · 🔬 Physics Lab**

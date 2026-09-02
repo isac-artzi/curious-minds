@@ -1,3 +1,9 @@
+---
+layout: default
+title: "🚀 Fork & Deploy"
+nav_order: 2
+---
+
 # Fork & Deploy: Your Own Curious Minds in ~15 Minutes
 
 *You need: a GitHub account, a Streamlit account, and — for live AI reasoning —
@@ -112,7 +118,7 @@ file, click the pencil icon, edit, commit. Streamlit redeploys automatically in
 about a minute.
 
 Swap in species from your own watershed. Add the reactions from your unit. See
-**[MODIFYING.md](MODIFYING.md)** for exactly where and how.
+**[MODIFYING.md](MODIFYING.html)** for exactly where and how.
 
 ## Step 6 — Decide who can see it
 
