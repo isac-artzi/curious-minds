@@ -762,3 +762,5 @@ if clicked:
     st.session_state.pop("chem_last_signature", None)
     st.toast(f"Exploring: {clicked}")
     st.rerun()
+
+ui.footer()

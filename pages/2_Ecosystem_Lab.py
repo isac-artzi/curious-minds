@@ -888,3 +888,5 @@ with st.expander("📖 Concepts"):
         "- **Confidence tiers** — `well_documented` (real case studies), `probable` (extrapolated "
         "from similar systems), `speculative` (long-horizon or novel combinations)."
     )
+
+ui.footer()

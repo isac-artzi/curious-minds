@@ -1118,3 +1118,5 @@ if result.quiz:
                         f"❌ Not quite. Correct answer: **{correct_text}**.  \n"
                         f"{q.explanation}"
                     )
+
+ui.footer()

@@ -1437,3 +1437,5 @@ GLOSSARY = {
 
 with st.expander("📖 Concepts"):
     st.markdown(GLOSSARY.get(scenario, ""))
+
+ui.footer()
